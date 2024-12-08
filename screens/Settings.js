@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, FlatList, Alert } from 'react-native';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '../src/config/firebaseConfig';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 export default function Settings() {
   const [resetModalVisible, setResetModalVisible] = useState(false);
@@ -12,6 +12,16 @@ export default function Settings() {
   // Estados para el modal de usuarios
   const [usersModalVisible, setUsersModalVisible] = useState(false);
   const [users, setUsers] = useState([]);
+
+  // Estados para el modal de borrado de datos
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+
+  // Estados para el modal de edición de datos
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editUserId, setEditUserId] = useState(null);
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
 
   // Envía el correo para restablecer contraseña
   const handlePasswordReset = async () => {
@@ -37,7 +47,7 @@ export default function Settings() {
     }
   };
 
-  // Cargar usuarios registrados (asumiendo una colección "users" en Firestore)
+  // Cargar usuarios registrados
   const loadUsers = () => {
     const unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
       const userList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -55,6 +65,57 @@ export default function Settings() {
   const handleOpenResetWithEmail = (email) => {
     setResetEmail(email);
     setResetModalVisible(true);
+  };
+
+  // Función para abrir el modal de confirmación de borrado de datos del usuario
+  const handleDeleteUserData = (userId) => {
+    setSelectedUserId(userId);
+    setDeleteModalVisible(true);
+  };
+
+  // Función para confirmar y borrar datos del usuario de Firestore
+  const confirmDeleteUserData = async () => {
+    if (!selectedUserId) return;
+    try {
+      await deleteDoc(doc(db, 'users', selectedUserId));
+      Alert.alert('Datos borrados', 'Los datos del usuario han sido borrados con éxito.');
+      setDeleteModalVisible(false);
+      setSelectedUserId(null);
+    } catch (error) {
+      console.log(error);
+      Alert.alert('Error', 'No se pudieron borrar los datos del usuario.');
+    }
+  };
+
+  // Función para abrir el modal de edición con los datos del usuario
+  const handleOpenEditUser = (user) => {
+    setEditUserId(user.id);
+    setEditFirstName(user.firstName);
+    setEditLastName(user.lastName);
+    setEditModalVisible(true);
+  };
+
+  // Función para confirmar la edición de datos del usuario
+  const handleEditUserSubmit = async () => {
+    if (!editFirstName.trim() || !editLastName.trim()) {
+      Alert.alert('Error', 'Nombre y Apellido no pueden estar vacíos.');
+      return;
+    }
+
+    try {
+      await updateDoc(doc(db, 'users', editUserId), {
+        firstName: editFirstName.trim(),
+        lastName: editLastName.trim()
+      });
+      Alert.alert('Éxito', 'Datos del usuario actualizados correctamente.');
+      setEditModalVisible(false);
+      setEditUserId(null);
+      setEditFirstName('');
+      setEditLastName('');
+    } catch (error) {
+      console.log(error);
+      Alert.alert('Error', 'No se pudieron actualizar los datos del usuario.');
+    }
   };
 
   return (
@@ -152,6 +213,22 @@ export default function Settings() {
                     >
                       <Text style={styles.buttonTextSmall}>Restablecer Contraseña</Text>
                     </TouchableOpacity>
+
+                    {/* Botón para eliminar datos del usuario en la DB */}
+                    <TouchableOpacity 
+                      style={[styles.buttonSmall, {marginTop:10, backgroundColor:'#e74c3c'}]} 
+                      onPress={() => handleDeleteUserData(item.id)}
+                    >
+                      <Text style={styles.buttonTextSmall}>Borrar Datos</Text>
+                    </TouchableOpacity>
+
+                    {/* Botón para editar datos del usuario */}
+                    <TouchableOpacity 
+                      style={[styles.buttonSmall, {marginTop:10, backgroundColor:'#f1c40f'}]} 
+                      onPress={() => handleOpenEditUser(item)}
+                    >
+                      <Text style={styles.buttonTextSmall}>Modificar Datos</Text>
+                    </TouchableOpacity>
                   </View>
                 )}
               />
@@ -162,6 +239,78 @@ export default function Settings() {
             >
               <Text style={styles.modalButtonText}>Cerrar</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de confirmación para borrar datos */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Atención</Text>
+            <Text style={styles.modalMessage}>
+              Esta acción borrará los datos del usuario de la base de datos, pero NO eliminará su cuenta de autenticación.
+              ¿Deseas continuar?
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.modalButtonConfirm} 
+                onPress={confirmDeleteUserData}
+              >
+                <Text style={styles.modalButtonText}>Sí, borrar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.modalButtonCancel} 
+                onPress={() => setDeleteModalVisible(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal para editar datos del usuario */}
+      <Modal
+        visible={editModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Modificar Datos del Usuario</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Nombre"
+              value={editFirstName}
+              onChangeText={setEditFirstName}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Apellido"
+              value={editLastName}
+              onChangeText={setEditLastName}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={styles.modalButtonConfirm} 
+                onPress={handleEditUserSubmit}
+              >
+                <Text style={styles.modalButtonText}>Guardar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.modalButtonCancel} 
+                onPress={() => setEditModalVisible(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>

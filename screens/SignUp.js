@@ -52,7 +52,7 @@ export default function SignUp({ navigation }) {
       });
 
       Alert.alert("Registro exitoso", "Usuario registrado con éxito.");
-      navigation.navigate('Login'); // Vuelve a Login sin resetear el stack
+      navigation.navigate('Login.js'); // Vuelve a Login sin resetear el stack
     } catch (error) {
       let errorMessage = "Hubo un problema al registrar el usuario.";
       switch (error.code) {

@@ -1,4 +1,3 @@
-// src/screens/Home.js
 import React, { useEffect, useState } from 'react';
 import { 
   View, 
@@ -78,6 +77,10 @@ export default function Home({ navigation }) {
   const [cartModalVisible, setCartModalVisible] = useState(false);
   const [purchaseNumber, setPurchaseNumber] = useState('');
 
+  // Estados para el Nombre y Apellido del Usuario
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+
   // Cargar catálogos
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'catalogs'), (snapshot) => {
@@ -100,11 +103,30 @@ export default function Home({ navigation }) {
   useEffect(() => {
     initializePurchaseCounter()
       .then(() => {
-        setPurchaseNumber(generatePurchaseNumber());
+        // No es necesario establecer purchaseNumber aquí
       })
       .catch((error) => {
         console.log("Error al inicializar el contador:", error);
       });
+  }, []);
+
+  // Obtener el Nombre y Apellido del Usuario
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (auth.currentUser) {
+        const userDocRef = doc(db, 'users', auth.currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setFirstName(userData.firstName || '');
+          setLastName(userData.lastName || '');
+        } else {
+          console.log('No se encontró el documento del usuario.');
+        }
+      }
+    };
+
+    fetchUserData();
   }, []);
 
   const handleLogOut = async () => {
@@ -126,12 +148,6 @@ export default function Home({ navigation }) {
   };
 
   const catalogsWithProducts = getCatalogsWithProducts();
-
-  // Generar un número único de compra basado en el contador de Firestore
-  const generatePurchaseNumber = () => {
-    // Este valor se obtiene dinámicamente durante la transacción
-    return '';
-  };
 
   // Función para agregar productos al carrito
   const addToCart = (product) => {
@@ -239,13 +255,13 @@ export default function Home({ navigation }) {
         let newLastNumber = lastNumber + 1;
         let newPrefix = prefix;
 
-        if (newLastNumber > 9999999) {
+        if (newLastNumber > 9999999) { // Asegúrate de que el límite coincida con el padding
           newPrefix = incrementPrefix(prefix);
           newLastNumber = 1;
         }
 
         // Generar el número de compra con prefijo y número
-        const purchaseNumber = `${newPrefix}${padNumber(newLastNumber, newPrefix === '' ? 2 : 2)}`;
+        const purchaseNumber = `${newPrefix}${padNumber(newLastNumber, 7)}`; // Cambiado a 7
 
         // Verificar y actualizar stock de productos
         for (let item of cart) {
@@ -293,9 +309,9 @@ export default function Home({ navigation }) {
         return purchaseNumber;
       });
 
-      Alert.alert('Pago Registrado', `Compra #${purchaseData} registrada exitosamente.`);
+      Alert.alert('Pago Registrado', `N° de Compra ${purchaseData} registrada exitosamente.`);
       setCart([]);
-      setPurchaseNumber(generatePurchaseNumber());
+      setPurchaseNumber(purchaseData); // Actualización correcta
       setCartModalVisible(false);
     } catch (error) {
       console.log(error);
@@ -362,9 +378,8 @@ export default function Home({ navigation }) {
           onRequestClose={() => setCartModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
+            <View style={styles.modalContainerCart}>
               <Text style={styles.modalTitle}>Carrito de Compras</Text>
-              <Text style={styles.purchaseNumber}>N° de Compra: {purchaseNumber || '---'}</Text>
               <FlatList
                 data={cart}
                 keyExtractor={(item) => item.id}
@@ -373,7 +388,7 @@ export default function Home({ navigation }) {
                 ListEmptyComponent={<Text style={styles.emptyCartText}>Tu carrito está vacío.</Text>}
               />
               <Text style={styles.totalText}>Total: ${calculateTotal().toFixed(2)}</Text>
-              <View style={styles.modalButtons}>
+              <View style={styles.modalActions}>
                 <TouchableOpacity style={styles.registerButton} onPress={registerPayment}>
                   <Text style={styles.buttonText}>Registrar Pago</Text>
                 </TouchableOpacity>
@@ -389,7 +404,9 @@ export default function Home({ navigation }) {
         <View style={styles.header}>
           <View style={styles.profileContainer}>
             <Image source={require('../assets/avatar.png')} style={styles.profileImage} />
-            <Text style={styles.greeting}>Hola, bienvenida</Text>
+            <Text style={styles.greeting}>
+              Hola, {firstName} {lastName}
+            </Text>
           </View>
           <TouchableOpacity onPress={() => setLogoutModalVisible(true)} style={styles.logoutButton}>
             <FontAwesome name="sign-out" size={24} color="#fff" />
@@ -398,7 +415,7 @@ export default function Home({ navigation }) {
 
         {/* Contenido principal con lista de catálogos y productos usando FlatList */}
         <View style={styles.content}>
-          <Text style={styles.placeholderText}>¡Gestiona tu tienda de ropa!</Text>
+          <Text style={styles.placeholderText}>Productos</Text>
           <FlatList
             data={catalogsWithProducts}
             keyExtractor={(item) => item.id}
@@ -428,8 +445,9 @@ export default function Home({ navigation }) {
             onPress={() => navigation.navigate('CatalogList')}
           >
             <FontAwesome name="th-large" size={24} color="#fff" />
-            <Text style={styles.actionText}>Catálogos</Text>
+            <Text style={styles.actionText}>Catálogo</Text>
           </TouchableOpacity>
+          {/* Definir si agregar o no 
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => navigation.navigate('CreateCatalog')}
@@ -437,12 +455,14 @@ export default function Home({ navigation }) {
             <FontAwesome name="plus" size={24} color="#fff" />
             <Text style={styles.actionText}>Nuevo Catálogo</Text>
           </TouchableOpacity>
+          */}
+
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => navigation.navigate('Settings')}
           >
-            <FontAwesome name="cog" size={24} color="#fff" />
-            <Text style={styles.actionText}>Configuración</Text>
+            <FontAwesome name="cog" size={28} color="#fff" />
+            <Text style={styles.actionText}>Ajuste</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -453,159 +473,211 @@ export default function Home({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff'
+    backgroundColor: '#f5f6fa', // Color de fondo suave
   },
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f6fa',
   },
   header: {
-    backgroundColor: '#a8e063',
-    padding: 20,
+    backgroundColor: '#4b7bec', // Azul más moderno
+    paddingVertical: 20,
+    paddingHorizontal: 25,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    elevation: 5, // Sombra para Android
+    shadowColor: '#000', // Sombra para iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   profileContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   profileImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 10,
+    width: 55,
+    height: 55,
+    borderRadius: 27.5,
+    marginRight: 15,
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   greeting: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#fff',
   },
   logoutButton: {
-    backgroundColor: '#333',
-    padding: 10,
-    borderRadius: 50,
+    backgroundColor: '#ff7675', // Rojo suave
+    padding: 12,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   content: {
     flex: 1,
-    padding: 20,
+    padding: 25,
   },
   placeholderText: {
-    fontSize: 16,
-    color: '#aaa',
-    marginBottom: 20,
+    fontSize: 18,
+    color: '#636e72',
+    marginBottom: 25,
     textAlign: 'center',
+    fontWeight: '500',
   },
   catalogContainer: {
     flex: 1,
   },
   catalogItem: {
-    backgroundColor: '#f0f0f0',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 10,
+    backgroundColor: '#dfe6e9', // Gris claro
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   catalogTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2d3436',
+    marginBottom: 8,
   },
   productItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#b2bec3',
   },
   productName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2c3e50',
+    color: '#2d3436',
   },
   productDetails: {
     fontSize: 14,
-    color: '#7f8c8d',
+    color: '#636e72',
+    marginTop: 2,
   },
   addToCartButton: {
     flexDirection: 'row',
-    backgroundColor: '#3498db',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 5,
+    backgroundColor: '#00b894', // Verde brillante
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 25,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
   },
   addToCartText: {
     color: '#fff',
-    marginLeft: 5,
+    marginLeft: 6,
     fontWeight: '600',
+    fontSize: 14,
   },
   noDataText: {
-    fontSize: 14,
+    fontSize: 16,
     fontStyle: 'italic',
-    color: '#888',
-    marginLeft: 10,
-    marginTop: 5,
+    color: '#b2bec3',
+    textAlign: 'center',
+    marginTop: 10,
   },
   actionsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 15,
+    justifyContent: 'space-between',
+    paddingVertical: 20,
     borderTopWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#dfe6e9',
     backgroundColor: '#fff',
+    paddingHorizontal: 25,
   },
   actionButton: {
     flex: 1,
     marginHorizontal: 5,
-    backgroundColor: '#3498db',
-    borderRadius: 8,
-    paddingVertical: 12,
+    backgroundColor: '#0984e3', // Azul vibrante
+    borderRadius: 25,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 3,
   },
   actionText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginTop: 5,
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: 6,
   },
   // Estilos para el modal de confirmación de Logout
   modalContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center', // Centra verticalmente
+    alignItems: 'center', // Centra horizontalmente
+    backgroundColor: 'rgba(0,0,0,0.5)', // Fondo semitransparente
+    paddingHorizontal: 20, // Espaciado horizontal para evitar que toque los bordes
   },
   modalContent: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 8,
-    width: '80%',
-    alignItems: 'center',
+    backgroundColor: '#fff', // Fondo del modal
+    padding: 25, // Espaciado interno
+    borderRadius: 20, // Esquinas más redondeadas
+    width: '85%', // Ancho relativo al contenedor
+    maxWidth: 400, // Ancho máximo (opcional para dispositivos grandes)
+    alignItems: 'center', // Centrar contenido dentro del modal
+    shadowColor: '#000', // Sombra para una mejor visualización
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 7, // Sombra para Android
   },
   modalText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2d3436',
+    marginBottom: 25,
+    textAlign: 'center', // Centra el texto en caso de que sea multilinea
   },
   modalActions: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between', // Distribuir uniformemente los botones
     width: '100%',
   },
   modalButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 25,
     marginHorizontal: 5,
+    minWidth: '40%', // Asegurar que los botones tengan un tamaño uniforme
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 3,
   },
   modalButtonText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '700',
     fontSize: 16,
+    textAlign: 'center',
   },
   // Estilos para el Carrito
   modalOverlay: {
@@ -614,40 +686,52 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContainer: {
+  modalContainerCart: { // Renombrado para evitar conflicto con modalContainer de logout
     width: '90%',
     maxHeight: '80%',
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
+    borderRadius: 20,
+    padding: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 7,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#2d3436',
+    marginBottom: 15,
     textAlign: 'center',
   },
   purchaseNumber: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 10,
+    color: '#636e72',
+    marginBottom: 15,
     textAlign: 'center',
   },
   cartItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginVertical: 5,
+    marginVertical: 8,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderColor: '#dfe6e9',
   },
   cartItemName: {
     fontSize: 16,
     fontWeight: '600',
     flex: 2,
+    color: '#2d3436',
   },
   cartItemPrice: {
     fontSize: 16,
     flex: 1,
     textAlign: 'center',
+    color: '#0984e3',
   },
   cartItemQuantity: {
     flexDirection: 'row',
@@ -656,65 +740,81 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   quantityButton: {
-    backgroundColor: '#3498db',
-    padding: 5,
-    borderRadius: 5,
+    backgroundColor: '#00b894',
+    padding: 6,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 5,
   },
   quantityButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
   },
   quantityText: {
-    marginHorizontal: 10,
     fontSize: 16,
+    fontWeight: '500',
+    color: '#2d3436',
   },
   totalText: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '700',
     textAlign: 'right',
-    marginVertical: 10,
+    marginVertical: 15,
+    color: '#2d3436',
   },
   registerButton: {
-    backgroundColor: '#2ecc71', // Verde
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: '#00cec9', // Azul turquesa brillante
+    padding: 14,
+    borderRadius: 25,
     alignItems: 'center',
     flex: 1,
-    marginRight: 5,
+    marginRight: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   cancelButton: {
-    backgroundColor: '#e74c3c', // Rojo
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: '#d63031', // Rojo intenso
+    padding: 14,
+    borderRadius: 25,
     alignItems: 'center',
     flex: 1,
-    marginLeft: 5,
+    marginLeft: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   emptyCartText: {
     textAlign: 'center',
-    color: '#888',
+    color: '#b2bec3',
     fontStyle: 'italic',
     marginVertical: 20,
+    fontSize: 16,
   },
   // Badge para el carrito
   cartBadge: {
     position: 'absolute',
     right: 10,
     top: -5,
-    backgroundColor: '#e74c3c',
-    borderRadius: 10,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
+    backgroundColor: '#d63031', // Rojo intenso para destacar
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   cartBadgeText: {
     color: '#fff',
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
 });

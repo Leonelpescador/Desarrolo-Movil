@@ -1,8 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, FlatList, Alert } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Modal, 
+  TextInput, 
+  FlatList, 
+  Alert,
+  ActivityIndicator
+} from 'react-native';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '../src/config/firebaseConfig';
-import { collection, onSnapshot, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { 
+  collection, 
+  onSnapshot, 
+  doc, 
+  deleteDoc, 
+  updateDoc, 
+  query, 
+  where 
+} from 'firebase/firestore';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { FontAwesome } from '@expo/vector-icons';
 
 export default function Settings() {
   const [resetModalVisible, setResetModalVisible] = useState(false);
@@ -22,6 +42,20 @@ export default function Settings() {
   const [editUserId, setEditUserId] = useState(null);
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
+
+  // Estados para el modal de consultas de compras
+  const [purchasesModalVisible, setPurchasesModalVisible] = useState(false);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredPurchases, setFilteredPurchases] = useState([]);
+  const [isLoadingPurchases, setIsLoadingPurchases] = useState(false);
+
+  // Estados para el modal de detalles de la compra
+  const [purchaseDetailsModalVisible, setPurchaseDetailsModalVisible] = useState(false);
+  const [selectedPurchase, setSelectedPurchase] = useState(null);
 
   // Envía el correo para restablecer contraseña
   const handlePasswordReset = async () => {
@@ -118,6 +152,57 @@ export default function Settings() {
     }
   };
 
+  // Función para buscar compras
+  const handleSearchPurchases = () => {
+    setIsLoadingPurchases(true);
+
+    // Construir la consulta con filtros de fecha
+    let q = collection(db, 'purchases');
+
+    if (startDate && endDate) {
+      q = query(
+        q,
+        where('date', '>=', startDate),
+        where('date', '<=', endDate)
+      );
+    }
+
+    // Escuchar en tiempo real
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let purchasesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Filtrar por término de búsqueda si se ingresa
+      if (searchTerm.trim()) {
+        purchasesList = purchasesList.filter(purchase =>
+          purchase.purchaseNumber.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+
+      setFilteredPurchases(purchasesList);
+      setIsLoadingPurchases(false);
+    }, (error) => {
+      console.log(error);
+      Alert.alert('Error', 'No se pudieron cargar las compras.');
+      setIsLoadingPurchases(false);
+    });
+
+    // No nos suscribimos para mantener la escucha mientras el modal esté abierto
+  };
+
+  // Función para ver detalles de una compra
+  const handleViewPurchaseDetails = (purchase) => {
+    setSelectedPurchase(purchase);
+    setPurchaseDetailsModalVisible(true);
+  };
+
+  // Cargar todas las compras al abrir el modal de compras
+  useEffect(() => {
+    if (purchasesModalVisible) {
+      handleSearchPurchases();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [purchasesModalVisible]);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Configuraciones</Text>
@@ -130,6 +215,11 @@ export default function Settings() {
       {/* Botón para ver usuarios registrados */}
       <TouchableOpacity style={styles.button} onPress={handleShowUsers}>
         <Text style={styles.buttonText}>Ver Usuarios Registrados</Text>
+      </TouchableOpacity>
+
+      {/* Botón para consultar compras realizadas */}
+      <TouchableOpacity style={styles.button} onPress={() => setPurchasesModalVisible(true)}>
+        <Text style={styles.buttonText}>Consultar Compras Realizadas</Text>
       </TouchableOpacity>
 
       {/* Modal para ingresar o confirmar el correo para restablecer contraseña */}
@@ -315,6 +405,154 @@ export default function Settings() {
         </View>
       </Modal>
 
+      {/* Modal de Detalles de la Compra */}
+      <Modal
+        visible={purchaseDetailsModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setPurchaseDetailsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.purchaseDetailsModalContainer}>
+            <FlatList
+              ListHeaderComponent={
+                <>
+                  <Text style={styles.modalTitle}>Detalles de la Compra</Text>
+                  {selectedPurchase && (
+                    <>
+                      <Text style={styles.detailHeader}>Número de Compra: {selectedPurchase.purchaseNumber}</Text>
+                      <Text style={styles.detailHeader}>Total: ${selectedPurchase.total.toFixed(2)}</Text>
+                    </>
+                  )}
+                </>
+              }
+              data={selectedPurchase?.items || []}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({ item }) => (
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailProduct}>{item.name}</Text>
+                  <Text style={styles.detailPrice}>Precio: ${item.price.toFixed(2)}</Text>
+                  <Text style={styles.detailQuantity}>Cantidad: {item.quantity}</Text>
+                </View>
+              )}
+              ListEmptyComponent={
+                !selectedPurchase ? (
+                  <Text style={styles.noDataText}>No hay detalles disponibles para esta compra.</Text>
+                ) : null
+              }
+              ListFooterComponent={
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setPurchaseDetailsModalVisible(false)}
+                >
+                  <Text style={styles.closeButtonText}>Cerrar</Text>
+                </TouchableOpacity>
+              }
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal de Consultas de Compras */}
+      <Modal
+        visible={purchasesModalVisible}
+        transparent={false}
+        animationType="slide"
+        onRequestClose={() => setPurchasesModalVisible(false)}
+      >
+        <View style={styles.purchasesModalContainer}>
+          <Text style={styles.modalTitle}>Consultar Compras Realizadas</Text>
+          
+          {/* Filtros de Fecha */}
+          <View style={styles.dateFilterContainer}>
+            <TouchableOpacity onPress={() => setShowStartDatePicker(true)} style={styles.datePickerButton}>
+              <Text style={styles.datePickerText}>
+                {startDate ? startDate.toLocaleDateString() : 'Fecha de Inicio'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowEndDatePicker(true)} style={styles.datePickerButton}>
+              <Text style={styles.datePickerText}>
+                {endDate ? endDate.toLocaleDateString() : 'Fecha de Fin'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          
+          {/* Selectores de Fecha */}
+          {showStartDatePicker && (
+            <DateTimePicker
+              value={startDate || new Date()}
+              mode="date"
+              display="default"
+              onChange={(event, selectedDate) => {
+                setShowStartDatePicker(false);
+                if (selectedDate) {
+                  setStartDate(selectedDate);
+                }
+              }}
+            />
+          )}
+          {showEndDatePicker && (
+            <DateTimePicker
+              value={endDate || new Date()}
+              mode="date"
+              display="default"
+              onChange={(event, selectedDate) => {
+                setShowEndDatePicker(false);
+                if (selectedDate) {
+                  setEndDate(selectedDate);
+                }
+              }}
+            />
+          )}
+
+          {/* Campo de Búsqueda */}
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Buscar por número de compra..."
+              value={searchTerm}
+              onChangeText={setSearchTerm}
+            />
+            <TouchableOpacity style={styles.searchButton} onPress={handleSearchPurchases}>
+              <FontAwesome name="search" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Listado de Compras */}
+          {isLoadingPurchases ? (
+            <ActivityIndicator size="large" color="#0984e3" style={{ marginVertical: 20 }} />
+          ) : (
+            <FlatList
+              data={filteredPurchases}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <View style={styles.purchaseItem}>
+                  <View style={styles.purchaseInfo}>
+                    <Text style={styles.purchaseNumber}>Compra N°{item.purchaseNumber}</Text>
+                    <Text style={styles.purchaseDate}>
+                      Fecha: {item.date?.toDate().toLocaleDateString()}
+                    </Text>
+                    <Text style={styles.purchaseTotal}>Total: ${item.total.toFixed(2)}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.eyeIconContainer} 
+                    onPress={() => handleViewPurchaseDetails(item)}
+                  >
+                    <FontAwesome name="eye" size={24} color="#0984e3" />
+                  </TouchableOpacity>
+                </View>
+              )}
+              ListEmptyComponent={<Text style={styles.noDataText}>No se encontraron compras.</Text>}
+            />
+          )}
+
+          {/* Botón para Cerrar el Modal */}
+          <TouchableOpacity style={styles.closeButton} onPress={() => setPurchasesModalVisible(false)}>
+            <Text style={styles.closeButtonText}>Cerrar</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -425,5 +663,137 @@ const styles = StyleSheet.create({
     padding:10,
     borderRadius:8,
     marginBottom:10
-  }
+  },
+
+  // **Nuevos estilos para el Modal de Consultas de Compras**
+  purchasesModalContainer: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#f5f6fa',
+  },
+  dateFilterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  datePickerButton: {
+    flex: 1,
+    backgroundColor: '#74b9ff',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  datePickerText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  searchInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#b2bec3',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    fontSize: 16,
+    marginRight: 10,
+  },
+  searchButton: {
+    backgroundColor: '#0984e3',
+    padding: 12,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  purchaseItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#dfe6e9',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  purchaseInfo: {
+    flex: 1,
+  },
+  eyeIconContainer: {
+    padding: 5,
+  },
+  purchaseNumber: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2d3436',
+  },
+  purchaseDate: {
+    fontSize: 14,
+    color: '#636e72',
+    marginTop: 5,
+  },
+  purchaseTotal: {
+    fontSize: 16,
+    color: '#00cec9',
+    marginTop: 5,
+    fontWeight: '600',
+  },
+  closeButton: {
+    backgroundColor: '#d63031',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  loadingText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#0984e3',
+    marginVertical: 20,
+  },
+  // **Estilos para el Modal de Detalles de la Compra**
+  purchaseDetailsModalContainer: {
+    width: '90%',
+    maxHeight: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+  },
+  detailHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  detailItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  detailProduct: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  detailPrice: {
+    fontSize: 16,
+    color: '#27ae60',
+  },
+  detailQuantity: {
+    fontSize: 16,
+    color: '#636e72',
+  },
+  noDataText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: '#636e72',
+    marginVertical: 20,
+  },
 });

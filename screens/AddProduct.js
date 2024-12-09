@@ -6,19 +6,30 @@ import { db } from '../src/config/firebaseConfig';
 export default function AddProduct({ route, navigation }) {
   const { catalogId } = route.params;
 
+  
   const [productName, setProductName] = useState('');
   const [productPrice, setProductPrice] = useState('');
+  const [productStock, setProductStock] = useState(''); 
 
   const handleAddProduct = async () => {
-    if (!productName.trim() || !productPrice.trim()) {
+    if (!productName.trim() || !productPrice.trim() || !productStock.trim()) {
       Alert.alert('Error', 'Todos los campos son obligatorios.');
+      return;
+    }
+
+    const priceValue = parseFloat(productPrice);
+    const stockValue = parseInt(productStock, 10); 
+
+    if (isNaN(priceValue) || isNaN(stockValue)) {
+      Alert.alert('Error', 'Precio y Cantidad en Stock deben ser valores numéricos.');
       return;
     }
 
     try {
       await addDoc(collection(db, 'products'), {
         name: productName,
-        price: parseFloat(productPrice),
+        price: priceValue,
+        stock: stockValue, 
         catalogId,
         createdAt: serverTimestamp()
       });
@@ -46,6 +57,13 @@ export default function AddProduct({ route, navigation }) {
         onChangeText={setProductPrice}
         keyboardType="numeric"
       />
+      <TextInput
+        style={styles.input}
+        placeholder="Cantidad en Stock"
+        value={productStock}
+        onChangeText={setProductStock}
+        keyboardType="numeric"
+      />
       <TouchableOpacity style={styles.button} onPress={handleAddProduct}>
         <Text style={styles.buttonText}>Agregar</Text>
       </TouchableOpacity>
@@ -54,10 +72,38 @@ export default function AddProduct({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex:1, backgroundColor:'#fff', padding:20, justifyContent:'center', alignItems:'center' },
-  title: { fontSize:22, fontWeight:'bold', marginBottom:20 },
-  input: { borderWidth:1, borderColor:'#ddd', borderRadius:8, padding:10, fontSize:16, marginBottom:10, width:'100%' },
-  button: { backgroundColor:'#2ecc71', paddingVertical:12, borderRadius:8, alignItems:'center', width:'100%', marginTop:10 },
-  buttonText: { color:'#fff', fontSize:16, fontWeight:'bold' }
+  container: { 
+    flex:1, 
+    backgroundColor:'#fff', 
+    padding:20, 
+    justifyContent:'center', 
+    alignItems:'center' 
+  },
+  title: { 
+    fontSize:22, 
+    fontWeight:'bold', 
+    marginBottom:20 
+  },
+  input: { 
+    borderWidth:1, 
+    borderColor:'#ddd', 
+    borderRadius:8, 
+    padding:10, 
+    fontSize:16, 
+    marginBottom:10, 
+    width:'100%' 
+  },
+  button: { 
+    backgroundColor:'#2ecc71', 
+    paddingVertical:12, 
+    borderRadius:8, 
+    alignItems:'center', 
+    width:'100%', 
+    marginTop:10 
+  },
+  buttonText: { 
+    color:'#fff', 
+    fontSize:16, 
+    fontWeight:'bold' 
+  }
 });
-

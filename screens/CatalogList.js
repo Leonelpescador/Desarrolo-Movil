@@ -1,19 +1,48 @@
-// src/screens/CatalogList.js
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, Alert } from 'react-native';
-import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, query, where } from 'firebase/firestore';
 import { db } from '../src/config/firebaseConfig';
 import { FontAwesome } from '@expo/vector-icons';
 
 export default function CatalogList({ navigation }) {
   const [catalogs, setCatalogs] = useState([]);
+  const [productCounts, setProductCounts] = useState({}); // Estado para contar productos por catálogo
+  const [productDetails, setProductDetails] = useState({}); // Estado para almacenar nombres de productos por catálogo
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'catalogs'), snapshot => {
+    // Escuchar cambios en la colección de catálogos
+    const unsubscribeCatalogs = onSnapshot(collection(db, 'catalogs'), snapshot => {
       const catList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setCatalogs(catList);
     });
-    return unsubscribe;
+
+    // Escuchar cambios en la colección de productos para contar y almacenar nombres por catálogo
+    const unsubscribeProducts = onSnapshot(collection(db, 'products'), snapshot => {
+      const counts = {};
+      const details = {};
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const catalogId = data.catalogId;
+        if (catalogId) {
+          // Contar productos por catálogo
+          counts[catalogId] = (counts[catalogId] || 0) + 1;
+
+          // Almacenar nombres de productos por catálogo
+          if (!details[catalogId]) {
+            details[catalogId] = [];
+          }
+          details[catalogId].push(data.name);
+        }
+      });
+      setProductCounts(counts);
+      setProductDetails(details);
+    });
+
+    // Limpiar listeners al desmontar el componente
+    return () => {
+      unsubscribeCatalogs();
+      unsubscribeProducts();
+    };
   }, []);
 
   const handleDeleteCatalog = async (id) => {
@@ -31,6 +60,7 @@ export default function CatalogList({ navigation }) {
               Alert.alert('Catálogo Eliminado', 'El catálogo ha sido eliminado correctamente.');
             } catch (error) {
               Alert.alert('Error', 'No se pudo eliminar el catálogo.');
+              console.error("Error eliminando catálogo:", error);
             }
           }
         }
@@ -47,6 +77,19 @@ export default function CatalogList({ navigation }) {
       >
         <Text style={styles.itemText}>{item.name}</Text>
         <Text style={styles.itemSubtext}>Toca para ver productos</Text>
+        {/* Mostrar la cantidad de productos */}
+        <Text style={styles.productCount}>Productos: {productCounts[item.id] || 0}</Text>
+        {/* Mostrar nombres de productos */}
+        {productDetails[item.id] && productDetails[item.id].length > 0 && (
+          <View style={styles.productNamesContainer}>
+            <Text style={styles.productNamesTitle}>Productos:</Text>
+            {productDetails[item.id].map((productName, index) => (
+              <Text key={index} style={styles.productName}>
+                • {productName}
+              </Text>
+            ))}
+          </View>
+        )}
       </TouchableOpacity>
       <View style={styles.itemActions}>
         <TouchableOpacity 
@@ -139,6 +182,23 @@ const styles=StyleSheet.create({
   itemSubtext:{
     fontSize:12,
     color:'#7f8c8d'
+  },
+  productCount: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    marginTop: 4,
+  },
+  productNamesContainer: {
+    marginTop: 8,
+  },
+  productNamesTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2c3e50',
+  },
+  productName: {
+    fontSize: 12,
+    color: '#34495e',
   },
   itemActions:{flexDirection:'row'},
   editButton:{

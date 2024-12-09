@@ -1,4 +1,3 @@
-// src/screens/CatalogDetail.js
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { collection, onSnapshot, doc, deleteDoc, query, where } from 'firebase/firestore';
@@ -42,7 +41,9 @@ export default function CatalogDetail({ route, navigation }) {
 
   const renderItem = ({ item }) => (
     <View style={styles.item}>
-      <Text style={styles.itemText}>{item.name} - ${item.price}</Text>
+      <Text style={styles.itemText}>
+        {item.name} - ${item.price.toFixed(2)} - Stock: {item.stock !== undefined ? item.stock : 'N/A'}
+      </Text>
       <View style={styles.itemActions}>
         <TouchableOpacity
           style={styles.editButton}

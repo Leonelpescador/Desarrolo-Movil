@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ActivityIndicator } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { auth, db } from '../src/config/firebaseConfig'; // Importa db
+import { auth, db } from '../src/config/firebaseConfig'; 
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
-import { doc, setDoc } from 'firebase/firestore'; // Importa setDoc y doc de firestore
-
+import { doc, setDoc } from 'firebase/firestore'; 
 const SignUpSchema = Yup.object().shape({
   firstName: Yup.string()
     .trim()

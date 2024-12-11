@@ -144,7 +144,7 @@ export default function Home({ navigation }) {
     return catalogs.map(catalog => {
       const catProducts = products.filter(prod => prod.catalogId === catalog.id);
       return { ...catalog, products: catProducts };
-    });
+    }); 
   };
 
   const catalogsWithProducts = getCatalogsWithProducts();
@@ -238,59 +238,64 @@ export default function Home({ navigation }) {
       Alert.alert('Carrito Vacío', 'No hay productos en el carrito para registrar.');
       return;
     }
-
+  
     try {
       const purchaseNumberDocRef = doc(db, 'counters', 'purchaseNumber');
-
+  
       const purchaseData = await runTransaction(db, async (transaction) => {
+        // Leer el documento del contador
         const counterDoc = await transaction.get(purchaseNumberDocRef);
-
         if (!counterDoc.exists()) {
-          throw "El documento de contador no existe!";
+          throw 'El documento de contador no existe!';
         }
-
-        let { prefix, lastNumber } = counterDoc.data();
-
+  
+        // Leer y validar el stock de todos los productos
+        const stockUpdates = [];
+        for (let item of cart) {
+          const productRef = doc(db, 'products', item.id);
+          const productDoc = await transaction.get(productRef);
+  
+          if (!productDoc.exists()) {
+            throw `El producto "${item.name}" no existe!`;
+          }
+  
+          const currentStock = productDoc.data().stock;
+          if (currentStock < item.quantity) {
+            throw `Stock insuficiente para "${item.name}". Disponible: ${currentStock}`;
+          }
+  
+          // Preparar actualizaciones de stock
+          stockUpdates.push({
+            productRef,
+            newStock: currentStock - item.quantity,
+          });
+        }
+  
         // Incrementar el número de compra
+        let { prefix, lastNumber } = counterDoc.data();
         let newLastNumber = lastNumber + 1;
         let newPrefix = prefix;
-
+  
         if (newLastNumber > 9999999) { // Asegúrate de que el límite coincida con el padding
           newPrefix = incrementPrefix(prefix);
           newLastNumber = 1;
         }
-
-        // Generar el número de compra con prefijo y número
-        const purchaseNumber = `${newPrefix}${padNumber(newLastNumber, 7)}`; // Cambiado a 7
-
-        // Verificar y actualizar stock de productos
-        for (let item of cart) {
-          const productRef = doc(db, 'products', item.id);
-          const productDoc = await transaction.get(productRef);
-
-          if (!productDoc.exists()) {
-            throw `El producto "${item.name}" no existe!`;
-          }
-
-          const currentStock = productDoc.data().stock;
-
-          if (currentStock < item.quantity) {
-            throw `Stock insuficiente para "${item.name}". Disponible: ${currentStock}`;
-          }
-
-          // Actualizar el stock
-          transaction.update(productRef, {
-            stock: currentStock - item.quantity,
-          });
-        }
-
+  
+        // Generar el número de compra
+        const purchaseNumber = `${newPrefix}${padNumber(newLastNumber, 7)}`;
+  
         // Actualizar el contador
         transaction.update(purchaseNumberDocRef, {
           prefix: newPrefix,
           lastNumber: newLastNumber,
         });
-
-        // Preparar datos de compra
+  
+        // Actualizar el stock de los productos
+        stockUpdates.forEach(({ productRef, newStock }) => {
+          transaction.update(productRef, { stock: newStock });
+        });
+  
+        // Registrar la compra
         const purchaseRecord = {
           purchaseNumber,
           items: cart.map((item) => ({
@@ -301,20 +306,19 @@ export default function Home({ navigation }) {
           total: calculateTotal(),
           date: serverTimestamp(),
         };
-
-        // Añadir la compra a la colección
+  
         const purchaseRef = collection(db, 'purchases');
-        await addDoc(purchaseRef, purchaseRecord);
-
+        await transaction.set(doc(purchaseRef), purchaseRecord);
+  
         return purchaseNumber;
       });
-
+  
       Alert.alert('Pago Registrado', `N° de Compra ${purchaseData} registrada exitosamente.`);
       setCart([]);
       setPurchaseNumber(purchaseData); // Actualización correcta
       setCartModalVisible(false);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       Alert.alert('Error', error.toString());
     }
   };

@@ -6,9 +6,8 @@ import { FontAwesome } from '@expo/vector-icons';
 
 export default function CatalogList({ navigation }) {
   const [catalogs, setCatalogs] = useState([]);
-  const [productCounts, setProductCounts] = useState({}); // Estado para contar productos por catálogo
-  const [productDetails, setProductDetails] = useState({}); // Estado para almacenar nombres de productos por catálogo
-
+  const [productCounts, setProductCounts] = useState({}); 
+  const [productDetails, setProductDetails] = useState({}); 
   useEffect(() => {
     // Escuchar cambios en la colección de catálogos
     const unsubscribeCatalogs = onSnapshot(collection(db, 'catalogs'), snapshot => {

@@ -1,8 +1,19 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, Modal } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  StyleSheet, 
+  Alert, 
+  Image, 
+  Modal, 
+  Dimensions 
+} from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../src/config/firebaseConfig';
+import { Video } from 'expo-av'; // Importa Video de expo-av
 
 export default function Login({ navigation }) {
   const [email, setEmail] = useState('');
@@ -13,6 +24,8 @@ export default function Login({ navigation }) {
   const [resetModalVisible, setResetModalVisible] = useState(false);
   const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
+
+  const video = useRef(null); // Referencia al video
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -69,51 +82,68 @@ export default function Login({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Image source={require('../assets/avatar.png')} style={styles.logo} />
-      <Text style={styles.title}>Iniciar sesión</Text>
+      {/* Video de Fondo */}
+      <Video
+        ref={video}
+        style={styles.backgroundVideo}
+        source={require('../assets/Desarrollo movile.mp4')} // Ruta del video
+        resizeMode="cover"
+        isLooping
+        shouldPlay
+        isMuted
+      />
 
-      <Text style={styles.label}>Correo</Text>
-      <View style={styles.inputContainer}>
-        <FontAwesome name="envelope" size={20} color="#7f8c8d" style={styles.icon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Ingrese su correo"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          placeholderTextColor="#aaa"
-        />
-      </View>
+      {/* Superposición oscura para mejorar la visibilidad */}
+      <View style={styles.overlay} />
 
-      <Text style={styles.label}>Contraseña</Text>
-      <View style={styles.inputContainer}>
-        <FontAwesome name="lock" size={20} color="#7f8c8d" style={styles.icon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Ingrese su contraseña"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-          placeholderTextColor="#aaa"
-        />
-        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-          <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#7f8c8d" />
+      {/* Contenido del Login */}
+      <View style={styles.content}>
+        <Image source={require('../assets/avatar.png')} style={styles.logo} />
+        <Text style={styles.title}>Iniciar sesión</Text>
+
+        <Text style={styles.label}>Correo</Text>
+        <View style={styles.inputContainer}>
+          <FontAwesome name="envelope" size={20} color="#7f8c8d" style={styles.icon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Ingrese su correo"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            placeholderTextColor="#aaa"
+          />
+        </View>
+
+        <Text style={styles.label}>Contraseña</Text>
+        <View style={styles.inputContainer}>
+          <FontAwesome name="lock" size={20} color="#7f8c8d" style={styles.icon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Ingrese su contraseña"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            placeholderTextColor="#aaa"
+          />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+            <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#7f8c8d" />
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={styles.button} onPress={handleLogin}>
+          <Text style={styles.buttonText}>Ingresar</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+          <Text style={styles.signUpText}>¿No tienes cuenta aún? Regístrate</Text>
+        </TouchableOpacity>
+
+        {/* Botón para olvidar contraseña */}
+        <TouchableOpacity onPress={() => setResetModalVisible(true)}>
+          <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
         </TouchableOpacity>
       </View>
-
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Ingresar</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-        <Text style={styles.signUpText}>¿No tienes cuenta aún? Regístrate</Text>
-      </TouchableOpacity>
-
-      {/* Botón para olvidar contraseña */}
-      <TouchableOpacity onPress={() => setResetModalVisible(true)}>
-        <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
-      </TouchableOpacity>
 
       {/* Modal para resetear contraseña */}
       <Modal
@@ -171,13 +201,33 @@ export default function Login({ navigation }) {
   );
 }
 
+const { width, height } = Dimensions.get('window');
+
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  backgroundVideo: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: width,
+    height: height,
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: width,
+    height: height,
+    backgroundColor: 'rgba(0,0,0,0.4)', // Superposición oscura semi-transparente
+  },
+  content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#fff',
   },
   logo: {
     width: 100,
@@ -191,14 +241,14 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
-    color: '#2c3e50'
+    color: '#fff', // Texto en color blanco para contraste
   },
   label: {
     alignSelf: 'flex-start',
     fontSize: 16,
     fontWeight: 'bold',
     marginTop: 10,
-    color: '#2c3e50'
+    color: '#fff', // Texto en color blanco para contraste
   },
   inputContainer: {
     flexDirection: 'row',
@@ -207,7 +257,7 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     marginBottom: 20,
     width: '100%',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'rgba(255,255,255,0.8)', // Fondo semi-transparente
     borderRadius: 8,
     paddingHorizontal: 10,
   },
@@ -218,7 +268,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     fontSize: 16,
-    color: '#2c3e50'
+    color: '#2c3e50',
   },
   button: {
     backgroundColor: '#2ecc71',
@@ -227,7 +277,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 20,
     alignItems: 'center',
-    width: '100%'
+    width: '100%',
   },
   buttonText: {
     color: '#fff',
@@ -238,13 +288,13 @@ const styles = StyleSheet.create({
     marginTop: 20,
     color: '#3498db',
     fontWeight: 'bold',
-    fontSize: 14
+    fontSize: 14,
   },
   forgotText: {
     marginTop: 10,
     color: '#e74c3c',
     fontWeight: 'bold',
-    fontSize: 14
+    fontSize: 14,
   },
   modalOverlay: {
     flex: 1,
@@ -263,7 +313,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 15,
-    textAlign: 'center'
+    textAlign: 'center',
   },
   modalMessage: {
     fontSize: 16,
@@ -290,6 +340,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     marginTop: 10,
+    flex: 1,
+    marginRight: 5,
+    alignItems: 'center',
   },
   modalButtonCancel: {
     backgroundColor: '#e74c3c',
@@ -297,6 +350,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     marginTop: 10,
+    flex: 1,
+    marginLeft: 5,
+    alignItems: 'center',
   },
   modalButtonText: {
     color: '#fff',

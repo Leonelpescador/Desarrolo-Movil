@@ -1,7 +1,29 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, TextInput, Modal, Dimensions } from 'react-native';
-import { collection, onSnapshot, doc, deleteDoc, query, where, addDoc, updateDoc } from 'firebase/firestore';
+import React, { useEffect, useState, useRef } from 'react';
+import { 
+  View, 
+  Text, 
+  FlatList, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Alert, 
+  TextInput, 
+  Modal, 
+  Dimensions, 
+  Animated, 
+  Easing 
+} from 'react-native';
+import { 
+  collection, 
+  onSnapshot, 
+  doc, 
+  deleteDoc, 
+  query, 
+  where, 
+  addDoc, 
+  updateDoc 
+} from 'firebase/firestore';
 import { db } from '../src/config/firebaseConfig';
+import { FontAwesome } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -16,6 +38,14 @@ export default function CatalogDetail({ route }) {
   const [productPrice, setProductPrice] = useState('');
   const [productStock, setProductStock] = useState('');
 
+  // Animaciones para modales
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  // Animaciones para tarjetas de productos
+  const cardFadeAnim = useRef(new Animated.Value(0)).current;
+  const cardSlideAnim = useRef(new Animated.Value(50)).current;
+
   // Cargar productos del catálogo
   useEffect(() => {
     const q = query(collection(db, 'products'), where('catalogId', '==', catalogId));
@@ -25,6 +55,62 @@ export default function CatalogDetail({ route }) {
     });
     return unsubscribe;
   }, [catalogId]);
+
+  // Animación de apertura y cierre de modales
+  useEffect(() => {
+    if (isAddModalVisible || isEditModalVisible || isDeleteModalVisible) {
+      // Iniciar animación de apertura del modal
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.ease),
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.ease),
+        }),
+      ]).start();
+    } else {
+      // Iniciar animación de cierre del modal
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+          easing: Easing.in(Easing.ease),
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 50,
+          duration: 300,
+          useNativeDriver: true,
+          easing: Easing.in(Easing.ease),
+        }),
+      ]).start();
+    }
+  }, [isAddModalVisible, isEditModalVisible, isDeleteModalVisible]);
+
+  // Animación para las tarjetas de productos
+  useEffect(() => {
+    // Animar las tarjetas al cargar
+    Animated.parallel([
+      Animated.timing(cardFadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.ease),
+      }),
+      Animated.timing(cardSlideAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.ease),
+      }),
+    ]).start();
+  }, [products]);
 
   // Función para abrir el modal de edición con datos del producto seleccionado
   const openEditModal = (product) => {
@@ -118,9 +204,17 @@ export default function CatalogDetail({ route }) {
     setSelectedProduct(null);
   };
 
-  // Renderiza cada producto como una tarjeta
+  // Renderiza cada producto como una tarjeta con animaciones
   const renderItem = ({ item }) => (
-    <View style={styles.card}>
+    <Animated.View
+      style={[
+        styles.card,
+        {
+          opacity: cardFadeAnim,
+          transform: [{ translateY: cardSlideAnim }],
+        },
+      ]}
+    >
       <Text style={styles.cardTitle}>{item.name}</Text>
       <Text style={styles.cardText}>Precio: ${item.price.toFixed(2)}</Text>
       <Text style={styles.cardText}>Stock: {item.stock}</Text>
@@ -132,7 +226,7 @@ export default function CatalogDetail({ route }) {
           <Text style={styles.actionText}>🗑️</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </Animated.View>
   );
 
   return (
@@ -151,9 +245,23 @@ export default function CatalogDetail({ route }) {
       />
 
       {/* Modal para añadir producto */}
-      <Modal visible={isAddModalVisible} transparent={true} animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+      <Modal visible={isAddModalVisible} transparent={true} animationType="none">
+        <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
+          <Animated.View style={[
+            styles.modalContainer, 
+            { 
+              transform: [{ translateY: slideAnim }] 
+            }
+          ]}>
+            {/* Botón de cerrar (X) */}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setIsAddModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>✖</Text>
+            </TouchableOpacity>
+
+            {/* Contenido del modal */}
             <Text style={styles.modalTitle}>Agregar Producto</Text>
             <TextInput
               style={styles.input}
@@ -181,14 +289,32 @@ export default function CatalogDetail({ route }) {
             <TouchableOpacity style={styles.cancelButton} onPress={() => setIsAddModalVisible(false)}>
               <Text style={styles.buttonText}>Cancelar</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+          </Animated.View>
+        </Animated.View>
       </Modal>
 
       {/* Modal para editar producto */}
-      <Modal visible={isEditModalVisible} transparent={true} animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+      <Modal visible={isEditModalVisible} transparent={true} animationType="none">
+        <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
+          <Animated.View style={[
+            styles.modalContainer, 
+            { 
+              transform: [{ translateY: slideAnim }] 
+            }
+          ]}>
+            {/* Botón de cerrar (X) */}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => {
+                setIsEditModalVisible(false);
+                setSelectedProduct(null);
+                resetFields();
+              }}
+            >
+              <Text style={styles.closeButtonText}>✖</Text>
+            </TouchableOpacity>
+
+            {/* Contenido del modal */}
             <Text style={styles.modalTitle}>Editar Producto</Text>
             <TextInput
               style={styles.input}
@@ -213,17 +339,26 @@ export default function CatalogDetail({ route }) {
             <TouchableOpacity style={styles.button} onPress={handleUpdateProduct}>
               <Text style={styles.buttonText}>Actualizar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelButton} onPress={() => setIsEditModalVisible(false)}>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => {
+              setIsEditModalVisible(false);
+              setSelectedProduct(null);
+              resetFields();
+            }}>
               <Text style={styles.buttonText}>Cancelar</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+          </Animated.View>
+        </Animated.View>
       </Modal>
 
       {/* Modal para eliminar producto */}
-      <Modal visible={isDeleteModalVisible} transparent={true} animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.deleteModalContainer}>
+      <Modal visible={isDeleteModalVisible} transparent={true} animationType="none">
+        <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
+          <Animated.View style={[
+            styles.deleteModalContainer, 
+            { 
+              transform: [{ translateY: slideAnim }] 
+            }
+          ]}>
             {/* Botón de cerrar (X) */}
             <TouchableOpacity
               style={styles.closeButton}
@@ -245,8 +380,8 @@ export default function CatalogDetail({ route }) {
             >
               <Text style={styles.buttonText}>Eliminar</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+          </Animated.View>
+        </Animated.View>
       </Modal>
     </View>
   );
@@ -262,6 +397,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginVertical: 20,
+    color: '#2c3e50',
   },
   addButton: {
     backgroundColor: '#2ecc71',
@@ -330,6 +466,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 20,
     alignItems: 'center',
+    position: 'relative',
   },
   deleteModalContainer: {
     width: '85%',
@@ -352,36 +489,6 @@ const styles = StyleSheet.create({
     marginVertical: 20,
     color: '#2c3e50',
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 16,
-    marginBottom: 10,
-    width: '100%',
-  },
-  button: {
-    backgroundColor: '#2ecc71',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    width: '100%',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  cancelButton: {
-    backgroundColor: '#e74c3c',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    width: '100%',
-    marginTop: 10,
-  },
   closeButton: {
     position: 'absolute',
     top: 10,
@@ -402,5 +509,35 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     width: '100%',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 16,
+    marginBottom: 10,
+    width: '100%',
+  },
+  button: {
+    backgroundColor: '#3498db',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 10,
+  },
+  cancelButton: {
+    backgroundColor: '#7f8c8d',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 10,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

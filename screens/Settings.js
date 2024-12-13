@@ -8,7 +8,9 @@ import {
   TextInput, 
   FlatList, 
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Dimensions,
+  ScrollView,
 } from 'react-native';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '../src/config/firebaseConfig';
@@ -19,10 +21,12 @@ import {
   deleteDoc, 
   updateDoc, 
   query, 
-  where 
+  where,
+  getDocs,
 } from 'firebase/firestore';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FontAwesome } from '@expo/vector-icons';
+import { LineChart } from 'react-native-chart-kit';
 
 export default function Settings() {
   const [resetModalVisible, setResetModalVisible] = useState(false);
@@ -56,6 +60,15 @@ export default function Settings() {
   // Estados para el modal de detalles de la compra
   const [purchaseDetailsModalVisible, setPurchaseDetailsModalVisible] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState(null);
+
+  // Estados para el Modal de Consulta de Progreso
+  const [progressModalVisible, setProgressModalVisible] = useState(false);
+  const [progressStartDate, setProgressStartDate] = useState(null);
+  const [progressEndDate, setProgressEndDate] = useState(null);
+  const [showProgressStartDatePicker, setShowProgressStartDatePicker] = useState(false);
+  const [showProgressEndDatePicker, setShowProgressEndDatePicker] = useState(false);
+  const [chartData, setChartData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Envía el correo para restablecer contraseña
   const handlePasswordReset = async () => {
@@ -203,6 +216,80 @@ export default function Settings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [purchasesModalVisible]);
 
+  // Función para generar la gráfica de progreso
+  const generateChart = async () => {
+    if (!progressStartDate || !progressEndDate) {
+      Alert.alert('Fechas Incompletas', 'Por favor selecciona ambas fechas.');
+      return;
+    }
+
+    if (progressStartDate > progressEndDate) {
+      Alert.alert('Fechas Inválidas', 'La fecha de inicio no puede ser posterior a la fecha de fin.');
+      return;
+    }
+
+    setIsLoading(true);
+    setChartData(null);
+
+    try {
+      // Crear una consulta para las compras dentro del rango de fechas
+      const q = query(
+        collection(db, 'purchases'),
+        where('date', '>=', progressStartDate),
+        where('date', '<=', progressEndDate)
+      );
+
+      // Obtener las compras
+      const snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        Alert.alert('Sin Datos', 'No se encontraron compras en el rango de fechas seleccionado.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Procesar los datos para la gráfica
+      const incomeByDate = {};
+
+      snapshot.forEach(doc => {
+        const purchase = doc.data();
+        const purchaseDate = purchase.date.toDate().toLocaleDateString();
+
+        if (incomeByDate[purchaseDate]) {
+          incomeByDate[purchaseDate] += purchase.total;
+        } else {
+          incomeByDate[purchaseDate] = purchase.total;
+        }
+      });
+
+      // Ordenar las fechas
+      const sortedDates = Object.keys(incomeByDate).sort((a, b) => {
+        const dateA = new Date(a);
+        const dateB = new Date(b);
+        return dateA - dateB;
+      });
+
+      // Preparar los datos para la gráfica
+      const labels = sortedDates;
+      const data = sortedDates.map(date => incomeByDate[date]);
+
+      setChartData({
+        labels: labels,
+        datasets: [
+          {
+            data: data,
+          },
+        ],
+      });
+
+      setIsLoading(false);
+    } catch (error) {
+      console.log(error);
+      Alert.alert('Error', 'Hubo un problema al generar la gráfica.');
+      setIsLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Configuraciones</Text>
@@ -220,6 +307,11 @@ export default function Settings() {
       {/* Botón para consultar compras realizadas */}
       <TouchableOpacity style={styles.button} onPress={() => setPurchasesModalVisible(true)}>
         <Text style={styles.buttonText}>Consultar Compras Realizadas</Text>
+      </TouchableOpacity>
+
+      {/* Botón para consultar progreso */}
+      <TouchableOpacity style={styles.button} onPress={() => setProgressModalVisible(true)}>
+        <Text style={styles.buttonText}>Consultar Progreso</Text>
       </TouchableOpacity>
 
       {/* Modal para ingresar o confirmar el correo para restablecer contraseña */}
@@ -553,6 +645,111 @@ export default function Settings() {
         </View>
       </Modal>
 
+      {/* Modal de Consulta de Progreso */}
+      <Modal
+        visible={progressModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setProgressModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.fullScreenModalContainer}>
+            <ScrollView contentContainerStyle={styles.fullScreenContent}>
+              <Text style={styles.modalTitle}>Consulta de Progreso</Text>
+              
+              {/* Selección de Fecha de Inicio y Fin al Lado */}
+              <View style={styles.dateFilterContainerProgress}>
+                <TouchableOpacity onPress={() => setShowProgressStartDatePicker(true)} style={styles.datePickerButton}>
+                  <Text style={styles.datePickerText}>
+                    {progressStartDate ? progressStartDate.toLocaleDateString() : 'Fecha de Inicio'}
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity onPress={() => setShowProgressEndDatePicker(true)} style={styles.datePickerButton}>
+                  <Text style={styles.datePickerText}>
+                    {progressEndDate ? progressEndDate.toLocaleDateString() : 'Fecha de Fin'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Selectores de Fecha */}
+              {showProgressStartDatePicker && (
+                <DateTimePicker
+                  value={progressStartDate || new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowProgressStartDatePicker(false);
+                    if (selectedDate) {
+                      setProgressStartDate(selectedDate);
+                    }
+                  }}
+                />
+              )}
+              {showProgressEndDatePicker && (
+                <DateTimePicker
+                  value={progressEndDate || new Date()}
+                  mode="date"
+                  display="default"
+                  onChange={(event, selectedDate) => {
+                    setShowProgressEndDatePicker(false);
+                    if (selectedDate) {
+                      setProgressEndDate(selectedDate);
+                    }
+                  }}
+                />
+              )}
+
+              {/* Botón para Generar Gráfica */}
+              <TouchableOpacity style={styles.generateChartButton} onPress={generateChart}>
+                <Text style={styles.generateChartButtonText}>Generar Gráfica</Text>
+              </TouchableOpacity>
+              
+              {/* Mostrar la Gráfica */}
+              {chartData && (
+                <LineChart
+                  data={chartData}
+                  width={Dimensions.get('window').width * 0.95} // Ancho de la gráfica
+                  height={300}
+                  yAxisLabel="$"
+                  yAxisSuffix=""
+                  yAxisInterval={1} // Opcional, intervalo de los ejes Y
+                  chartConfig={{
+                    backgroundColor: '#f5f6fa',
+                    backgroundGradientFrom: '#f5f6fa',
+                    backgroundGradientTo: '#f5f6fa',
+                    decimalPlaces: 2, // Número de decimales
+                    color: (opacity = 1) => `rgba(52, 152, 219, ${opacity})`,
+                    labelColor: (opacity = 1) => `rgba(45, 52, 54, ${opacity})`,
+                    style: {
+                      borderRadius: 16,
+                    },
+                    propsForDots: {
+                      r: '6',
+                      strokeWidth: '2',
+                      stroke: '#2980b9',
+                    },
+                  }}
+                  bezier
+                  style={{
+                    marginVertical: 20,
+                    borderRadius: 16,
+                  }}
+                />
+              )}
+              
+              {/* Indicador de Carga */}
+              {isLoading && <ActivityIndicator size="large" color="#3498db" style={{ marginTop: 20 }} />}
+              
+              {/* Botón para Cerrar el Modal */}
+              <TouchableOpacity style={styles.closeButton} onPress={() => setProgressModalVisible(false)}>
+                <Text style={styles.closeButtonText}>Cerrar</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -615,6 +812,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     maxHeight:'70%'
   },
+  fullScreenModalContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 0,
+    padding: 20,
+  },
+  fullScreenContent: {
+    flexGrow: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'stretch', // Cambiado de 'center' a 'stretch'
+  },
+  progressModalContainer: {
+    // Anteriormente: width: '90%', maxHeight: '90%',
+    // Modificado para ocupar toda la pantalla
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 0,
+    padding: 20,
+    // alignItems: 'center', // Ajustado en ScrollView
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -675,14 +896,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 15,
+    width: '100%', // Añadido para asegurar que ocupe todo el ancho
+  },
+  dateFilterContainerProgress: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+    width: '100%', // Asegura que ocupe todo el ancho
   },
   datePickerButton: {
     flex: 1,
-    backgroundColor: '#74b9ff',
+    backgroundColor: '#0984e3',
     paddingVertical: 12,
     borderRadius: 8,
-    alignItems: 'center',
     marginHorizontal: 5,
+    alignItems: 'center',
   },
   datePickerText: {
     color: '#fff',
@@ -743,8 +971,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   closeButton: {
-    backgroundColor: '#d63031',
+    backgroundColor: '#e74c3c',
     paddingVertical: 12,
+    paddingHorizontal: 30,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 15,
@@ -795,5 +1024,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#636e72',
     marginVertical: 20,
+  },
+  // **Estilos para el Modal de Consulta de Progreso**
+  generateChartButton: {
+    backgroundColor: '#2ecc71',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 15,
+    width: '100%',
+    alignItems: 'center',
+  },
+  generateChartButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

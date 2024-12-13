@@ -37,6 +37,9 @@ export default function CatalogList({ navigation }) {
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
+  // Modo de eliminación de productos
+  const [isProductDeleteMode, setIsProductDeleteMode] = useState(false);
+
   // Selección de catálogo para eliminar o editar
   const [selectedCatalog, setSelectedCatalog] = useState(null);
 
@@ -56,7 +59,7 @@ export default function CatalogList({ navigation }) {
       setCatalogs(catList);
     });
 
-    // Escuchar cambios en la colección de productos para contar y almacenar nombres por catálogo
+    // Escuchar cambios en la colección de productos para contar y almacenar detalles por catálogo
     const unsubscribeProducts = onSnapshot(collection(db, 'products'), snapshot => {
       const counts = {};
       const details = {};
@@ -67,11 +70,11 @@ export default function CatalogList({ navigation }) {
           // Contar productos por catálogo
           counts[catalogId] = (counts[catalogId] || 0) + 1;
 
-          // Almacenar nombres de productos por catálogo
+          // Almacenar detalles de productos por catálogo
           if (!details[catalogId]) {
             details[catalogId] = [];
           }
-          details[catalogId].push(data.name);
+          details[catalogId].push({ id: doc.id, name: data.name });
         }
       });
       setProductCounts(counts);
@@ -123,14 +126,20 @@ export default function CatalogList({ navigation }) {
 
   // Funciones para manejar la eliminación de catálogos
   const handleDeleteCatalog = async () => {
-    try {
-      await deleteDoc(doc(db, 'catalogs', selectedCatalog.id));
-      Alert.alert('Éxito', 'Catálogo eliminado correctamente.');
-      setIsDeleteModalVisible(false);
-      setSelectedCatalog(null);
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo eliminar el catálogo.');
-      console.error("Error eliminando catálogo:", error);
+    if (productCounts[selectedCatalog.id] > 0) {
+      // Si el catálogo tiene productos, activa el modo de eliminación de productos
+      setIsProductDeleteMode(true);
+    } else {
+      // Si no tiene productos, procede a eliminar el catálogo
+      try {
+        await deleteDoc(doc(db, 'catalogs', selectedCatalog.id));
+        Alert.alert('Éxito', 'Catálogo eliminado correctamente.');
+        setIsDeleteModalVisible(false);
+        setSelectedCatalog(null);
+      } catch (error) {
+        Alert.alert('Error', 'No se pudo eliminar el catálogo.');
+        console.error("Error eliminando catálogo:", error);
+      }
     }
   };
 
@@ -210,6 +219,34 @@ export default function CatalogList({ navigation }) {
     ]).start();
   }, []);
 
+  // Función para eliminar un producto
+  const handleDeleteProduct = async (catalogId, productId, productName) => {
+    Alert.alert(
+      'Confirmar Eliminación',
+      `¿Estás seguro de eliminar el producto "${productName}"?`,
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteDoc(doc(db, 'products', productId));
+              Alert.alert('Éxito', `Producto "${productName}" eliminado correctamente.`);
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo eliminar el producto.');
+              console.error(`Error eliminando producto ${productId}:`, error);
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
   // Renderiza cada catálogo como una tarjeta con animaciones
   const renderItem = ({ item, index }) => (
     <Animated.View
@@ -232,9 +269,9 @@ export default function CatalogList({ navigation }) {
         {productDetails[item.id] && productDetails[item.id].length > 0 && (
           <View style={styles.productNamesContainer}>
             <Text style={styles.productNamesTitle}>Productos:</Text>
-            {productDetails[item.id].map((productName, idx) => (
-              <Text key={idx} style={styles.productName}>
-                • {productName}
+            {productDetails[item.id].map((product, idx) => (
+              <Text key={product.id} style={styles.productName}>
+                • {product.name}
               </Text>
             ))}
           </View>
@@ -298,24 +335,67 @@ export default function CatalogList({ navigation }) {
             {/* Botón de cerrar (X) */}
             <TouchableOpacity
               style={styles.closeButton}
-              onPress={() => setIsDeleteModalVisible(false)}
+              onPress={() => {
+                setIsDeleteModalVisible(false);
+                setSelectedCatalog(null);
+                setIsProductDeleteMode(false); // Reiniciar el modo de eliminación de productos
+              }}
             >
               <Text style={styles.closeButtonText}>✖</Text>
             </TouchableOpacity>
 
             {/* Contenido del modal */}
-            <Text style={styles.modalTitle}>Eliminar Catálogo</Text>
-            <Text style={styles.modalMessage}>
-              ¿Estás seguro de eliminar "{selectedCatalog?.name}"? Esta acción no se puede deshacer.
-            </Text>
-
-            {/* Botón de eliminar centrado */}
-            <TouchableOpacity
-              style={styles.deleteButtonLarge}
-              onPress={handleDeleteCatalog}
-            >
-              <Text style={styles.buttonText}>Eliminar</Text>
-            </TouchableOpacity>
+            {isProductDeleteMode ? (
+              <>
+                <Text style={styles.modalTitle}>Eliminar Productos</Text>
+                <Text style={styles.modalMessage}>
+                  Este catálogo contiene productos. Elimina los productos individualmente antes de eliminar el catálogo.
+                </Text>
+                <FlatList
+                  data={productDetails[selectedCatalog.id] || []}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <View style={styles.productItemContainer}>
+                      <Text style={styles.productNameText}>• {item.name}</Text>
+                      <TouchableOpacity 
+                        style={styles.trashButton} 
+                        onPress={() => handleDeleteProduct(selectedCatalog.id, item.id, item.name)}
+                        accessibilityLabel={`Eliminar producto ${item.name}`}
+                      >
+                        <FontAwesome name="trash" size={20} color="#e74c3c" />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  ListEmptyComponent={
+                    <Text style={styles.noProductsText}>No hay productos para eliminar.</Text>
+                  }
+                />
+                <TouchableOpacity
+                  style={styles.closeButtonLarge}
+                  onPress={() => {
+                    setIsDeleteModalVisible(false);
+                    setSelectedCatalog(null);
+                    setIsProductDeleteMode(false);
+                  }}
+                >
+                  <Text style={styles.buttonText}>Cerrar</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalTitle}>Eliminar Catálogo</Text>
+                <Text style={styles.modalMessage}>
+                  ¿Estás seguro de eliminar "{selectedCatalog?.name}"? Esta acción no se puede deshacer.
+                </Text>
+                <TouchableOpacity
+                  style={styles.deleteButtonLarge}
+                  onPress={handleDeleteCatalog}
+                  accessibilityLabel={`Eliminar catálogo ${selectedCatalog?.name}`}
+                >
+                  <Text style={styles.buttonText}>Eliminar</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </Animated.View>
         </Animated.View>
       </Modal>
@@ -332,7 +412,10 @@ export default function CatalogList({ navigation }) {
             {/* Botón de cerrar (X) */}
             <TouchableOpacity
               style={styles.closeButton}
-              onPress={() => setIsCreateModalVisible(false)}
+              onPress={() => {
+                setIsCreateModalVisible(false);
+                setCatalogName('');
+              }}
             >
               <Text style={styles.closeButtonText}>✖</Text>
             </TouchableOpacity>
@@ -571,6 +654,38 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     width: '100%',
+    marginTop: 20,
+  },
+  productItemContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderColor: '#ecf0f1',
+  },
+  productNameText: {
+    fontSize: 16,
+    color: '#2c3e50',
+  },
+  trashButton: {
+    padding: 5,
+  },
+  noProductsText: {
+    textAlign: 'center',
+    color: '#7f8c8d',
+    fontStyle: 'italic',
+    marginVertical: 20,
+    fontSize: 16,
+  },
+  closeButtonLarge: {
+    backgroundColor: '#7f8c8d',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    width: '100%',
+    marginTop: 20,
   },
   input: {
     borderWidth: 1,

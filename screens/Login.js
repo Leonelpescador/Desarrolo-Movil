@@ -17,7 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const { width, height } = Dimensions.get('window');
 
 // Asegúrate de que esta URL sea la de tu servidor Django
-const API_BASE_URL = "http://192.168.202.249:1000/api";
+const API_BASE_URL = "http://186.123.103.68:88/api";
 
 export default function LoginScreen() {
   const navigation = useNavigation();

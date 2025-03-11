@@ -10,14 +10,13 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
-  ScrollView
+  ScrollView,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 
-// Endpoints de la API (asegúrate de que devuelvan JSON)
-const SOLICITUD_API_URL = "http:/186.123.103.68:88/api/solicitudenfermeria/?format=json";
+const SOLICITUD_API_URL = "http://186.123.103.68:88/api/solicitudenfermeria/?format=json";
 const CAJA_API_URL = "http://186.123.103.68:88/api/caja/?format=json";
 const SECTOR_API_URL = "http://186.123.103.68:88/api/sector/?format=json";
 const CAMA_API_URL = "http://186.123.103.68:88/api/cama/?format=json";
@@ -27,7 +26,7 @@ const DESCARTABLE_API_URL = "http://186.123.103.68:88/api/descartableenfermeria/
 export default function CrearSolicitud() {
   const navigation = useNavigation();
 
-  // Estados para almacenar datos de la API
+  // Estados para datos de la API
   const [cajas, setCajas] = useState([]);
   const [sectors, setSectors] = useState([]);
   const [allCamas, setAllCamas] = useState([]);
@@ -47,7 +46,7 @@ export default function CrearSolicitud() {
   const [origenMedicamento, setOrigenMedicamento] = useState("");
   const [saco, setSaco] = useState("");
 
-  // Estados para los modales de selección
+  // Estados para los modales
   const [medModalVisible, setMedModalVisible] = useState(false);
   const [descModalVisible, setDescModalVisible] = useState(false);
 
@@ -73,7 +72,7 @@ export default function CrearSolicitud() {
     }
   };
 
-  // Cargar datos de la API
+  // Cargar datos de la API al montar el componente
   useEffect(() => {
     const fetchData = async () => {
       await Promise.all([
@@ -100,7 +99,7 @@ export default function CrearSolicitud() {
     }
   }, [selectedSector, allCamas]);
 
-  // Actualizar el campo "detalles" basado en suministros seleccionados
+  // Actualizar el campo "detalles" basado en lo seleccionado
   const updateDetalles = () => {
     let text = "";
     Object.values(selectedMedicamentos).forEach(item => {
@@ -131,7 +130,7 @@ export default function CrearSolicitud() {
     updateDetalles();
   };
 
-  // Función para enviar la solicitud al servidor (POST)
+  // Función para enviar la solicitud a la API (POST)
   const handleSubmit = async () => {
     if (!nombrePaciente || !apellidoPaciente) {
       Alert.alert("Error", "Complete los campos obligatorios.");
@@ -143,28 +142,46 @@ export default function CrearSolicitud() {
       nombre_paciente: nombrePaciente,
       apellido_paciente: apellidoPaciente,
       numero_caja: numeroCaja,
-      detalles,
+      detalles: detalles,
       saco_medicamento_de_caja: sacoMedicamento,
-      origen_medicamento,
-      saco,
+      origen_medicamento: origenMedicamento,
+      saco: saco,
       estado: "pendiente"
     };
 
+    console.log("Enviando payload:", payload);
+
     try {
       const token = await AsyncStorage.getItem('token');
+      console.log("Token obtenido:", token);
       const response = await fetch(SOLICITUD_API_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
+      console.log("Respuesta del servidor:", response);
       if (response.ok) {
         Alert.alert("Éxito", "Solicitud creada correctamente.");
+        // Reinicia los campos si lo deseas
+        setSelectedSector("");
+        setSelectedCama("");
+        setNombrePaciente("");
+        setApellidoPaciente("");
+        setNumeroCaja("");
+        setDetalles("");
+        setSacoMedicamento(false);
+        setOrigenMedicamento("");
+        setSaco("");
+        setSelectedMedicamentos({});
+        setSelectedDescartables({});
+        // Navegar a la pantalla de listado
         navigation.navigate("ListarSolicitudesEnfermeria");
       } else {
         const errorData = await response.json();
+        console.error("Error en respuesta:", errorData);
         Alert.alert("Error", JSON.stringify(errorData));
       }
     } catch (error) {

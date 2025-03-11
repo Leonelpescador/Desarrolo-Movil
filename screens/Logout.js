@@ -8,35 +8,36 @@ export default function Logout() {
   const navigation = useNavigation();
 
   useEffect(() => {
-    const logout = async () => {
+    const logoutUser = async () => {
       try {
-        // Limpia los datos de autenticación
+        // Elimina el token almacenado
         await AsyncStorage.removeItem('token');
-        await AsyncStorage.removeItem('userType');
       } catch (error) {
-        console.error("Error durante el logout:", error);
+        console.error("Error al borrar el token:", error);
       } finally {
-        // Reinicia la navegación para volver a la pantalla de Login
+        // Redirige a la pantalla de Login
         navigation.reset({
           index: 0,
           routes: [{ name: 'Login' }],
         });
       }
     };
-    logout();
+
+    logoutUser();
   }, [navigation]);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.loadingContainer}>
       <ActivityIndicator size="large" color="#4A90E2" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1, 
-    justifyContent: 'center', 
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fff',
   },
 });

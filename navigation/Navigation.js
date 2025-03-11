@@ -1,42 +1,44 @@
 import React, { useEffect, useState } from 'react';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { onAuthStateChanged } from 'firebase/auth';  
-import { auth } from '../src/config/firebaseConfig';  
-
-// Pantallas de Autenticación
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Login from '../screens/Login';
 import SignUp from '../screens/SignUp';
-
-// Pantallas principales
 import Home from '../screens/Home';
-import CatalogList from '../screens/CatalogList';
-import CatalogDetail from '../screens/CatalogDetail';
-import CreateCatalog from '../screens/CreateCatalog';
-import EditCatalog from '../screens/EditCatalog';
-import AddProduct from '../screens/AddProduct';
-import EditProduct from '../screens/EditProduct';
-import Settings from '../screens/Settings';
 
 const Stack = createStackNavigator();
 
 export default function Navigation() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Escucha cambios de autenticación (login/logout)
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, user => {
-      setIsAuthenticated(!!user); 
-    });
-    return () => unsubscribe();
+    const checkAuth = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        setIsAuthenticated(!!token);
+      } catch (error) {
+        console.error("Error al obtener el token:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    checkAuth();
   }, []);
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4A90E2" />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName={isAuthenticated ? "Home" : "Login"}>
-        
         {!isAuthenticated ? (
-          // Rutas para usuarios no autenticados
           <>
             <Stack.Screen 
               name="Login" 
@@ -50,51 +52,22 @@ export default function Navigation() {
             />
           </>
         ) : (
-          // Rutas para usuarios autenticados
-          <>
-            <Stack.Screen 
-              name="Home" 
-              component={Home} 
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen 
-              name="CatalogList" 
-              component={CatalogList} 
-              options={{ title: "Lista de Catálogos" }} 
-            />
-            <Stack.Screen 
-              name="CatalogDetail" 
-              component={CatalogDetail} 
-              options={{ title: "Detalle del Catálogo" }} 
-            />
-            <Stack.Screen 
-              name="CreateCatalog" 
-              component={CreateCatalog} 
-              options={{ title: "Crear Catálogo" }} 
-            />
-            <Stack.Screen 
-              name="EditCatalog" 
-              component={EditCatalog} 
-              options={{ title: "Editar Catálogo" }} 
-            />
-            <Stack.Screen 
-              name="AddProduct" 
-              component={AddProduct} 
-              options={{ title: "Agregar Producto" }} 
-            />
-            <Stack.Screen 
-              name="EditProduct" 
-              component={EditProduct} 
-              options={{ title: "Editar Producto" }} 
-            />
-            <Stack.Screen 
-              name="Settings" 
-              component={Settings} 
-              options={{ title: "Configuraciones" }} 
-            />
-          </>
+          <Stack.Screen 
+            name="Home" 
+            component={Home} 
+            options={{ headerShown: false }}
+          />
         )}
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    backgroundColor: '#fff', // Aseguramos un fondo blanco
+  },
+});

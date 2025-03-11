@@ -1,361 +1,171 @@
-import React, { useState, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Alert, 
-  Image, 
-  Modal, 
-  Dimensions 
+// screens/LoginScreen.js
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ImageBackground,
+  Image,
+  Dimensions,
+  Alert,
 } from 'react-native';
-import { FontAwesome } from '@expo/vector-icons';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../src/config/firebaseConfig';
-import { Video } from 'expo-av'; // Importa Video de expo-av
+import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function Login({ navigation }) {
-  const [email, setEmail] = useState('');
+const { width, height } = Dimensions.get('window');
+
+// Asegúrate de que esta URL sea la de tu servidor Django
+const API_BASE_URL = "http://192.168.68.55:88/api";
+
+export default function LoginScreen() {
+  const navigation = useNavigation();
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-
-  // Estados para reset de contraseña
-  const [resetModalVisible, setResetModalVisible] = useState(false);
-  const [successModalVisible, setSuccessModalVisible] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
-
-  const video = useRef(null); // Referencia al video
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Por favor ingrese ambos campos.");
+    if (!username || !password) {
+      Alert.alert("Error", "Debes ingresar usuario y contraseña.");
       return;
     }
-
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      Alert.alert("Login exitoso", "Has iniciado sesión correctamente.");
-      navigation.reset({ index: 0, routes: [{ name: 'Home' }] }); 
-    } catch (error) {
-      let errorMessage = "Hubo un problema al iniciar sesión.";
-      switch (error.code) {
-        case 'auth/invalid-email':
-          errorMessage = "El formato del correo electrónico no es válido.";
-          break;
-        case 'auth/wrong-password':
-          errorMessage = "La contraseña es incorrecta.";
-          break;
-        case 'auth/user-not-found':
-          errorMessage = "No se encontró un usuario con este correo.";
-          break;
-        case 'auth/network-request-failed':
-          errorMessage = "Error de conexión, por favor intenta más tarde.";
-          break;
+      // Enviar credenciales a tu endpoint de autenticación
+      const response = await fetch(`${API_BASE_URL}/token/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      
+      if (!response.ok) {
+        throw new Error("Credenciales inválidas o error en la conexión.");
       }
-      Alert.alert("Error", errorMessage);
-    }
-  };
-
-  const handlePasswordReset = async () => {
-    if (!resetEmail.trim()) {
-      alert('Por favor ingresa un correo electrónico válido.');
-      return;
-    }
-
-    try {
-      await sendPasswordResetEmail(auth, resetEmail);
-      setResetModalVisible(false);
-      setSuccessModalVisible(true);
-      setResetEmail('');
-    } catch (error) {
-      if (error.code === 'auth/user-not-found') {
-        alert('El correo ingresado no corresponde a un usuario registrado.');
-      } else if (error.code === 'auth/invalid-email') {
-        alert('Por favor ingresa un correo electrónico válido.');
+      
+      const data = await response.json();
+      // Se espera que la respuesta tenga una clave 'access' con el token
+      if (data && data.access) {
+        await AsyncStorage.setItem('token', data.access);
+        Alert.alert("Éxito", "Inicio de sesión correcto.");
+        navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
       } else {
-        console.log(error);
-        alert('Error al enviar el correo. Intenta nuevamente.');
+        throw new Error("No se recibió token de autenticación.");
       }
+    } catch (error) {
+      Alert.alert("Error", error.message);
     }
   };
 
   return (
-    <View style={styles.container}>
-      {/* Video de Fondo */}
-      <Video
-        ref={video}
-        style={styles.backgroundVideo}
-        source={require('../assets/Desarrollo movile.mp4')} // Ruta del video
-        resizeMode="cover"
-        isLooping
-        shouldPlay
-        isMuted
-      />
+    <ImageBackground
+      source={require('../assets/fondo1.jpg')}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      {/* Overlay (opcional, descomenta si deseas overlay) */}
+      {/* <View style={styles.overlay} /> */}
 
-      {/* Superposición oscura para mejorar la visibilidad */}
-      <View style={styles.overlay} />
-
-      {/* Contenido del Login */}
-      <View style={styles.content}>
-        <Image source={require('../assets/avatar.png')} style={styles.logo} />
-        <Text style={styles.title}>Iniciar sesión</Text>
-
-        <Text style={styles.label}>Correo</Text>
-        <View style={styles.inputContainer}>
-          <FontAwesome name="envelope" size={20} color="#7f8c8d" style={styles.icon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Ingrese su correo"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            placeholderTextColor="#aaa"
+      <View style={styles.container}>
+        <View style={styles.loginContainer}>
+          <Image
+            source={require('../assets/cenesa_logo.jpg')}
+            style={styles.logo}
           />
-        </View>
+          <Text style={styles.title}>Iniciar Sesión</Text>
 
-        <Text style={styles.label}>Contraseña</Text>
-        <View style={styles.inputContainer}>
-          <FontAwesome name="lock" size={20} color="#7f8c8d" style={styles.icon} />
           <TextInput
             style={styles.input}
-            placeholder="Ingrese su contraseña"
+            placeholder="Nombre de usuario"
+            placeholderTextColor="#aaa"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Contraseña"
+            placeholderTextColor="#aaa"
+            secureTextEntry={true}
             value={password}
             onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-            placeholderTextColor="#aaa"
           />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <FontAwesome name={showPassword ? "eye-slash" : "eye"} size={20} color="#7f8c8d" />
+
+          <TouchableOpacity style={styles.button} onPress={handleLogin}>
+            <Text style={styles.buttonText}>Iniciar Sesión</Text>
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Ingresar</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-          <Text style={styles.signUpText}>¿No tienes cuenta aún? Regístrate</Text>
-        </TouchableOpacity>
-
-        {/* Botón para olvidar contraseña */}
-        <TouchableOpacity onPress={() => setResetModalVisible(true)}>
-          <Text style={styles.forgotText}>¿Olvidaste tu contraseña?</Text>
-        </TouchableOpacity>
       </View>
-
-      {/* Modal para resetear contraseña */}
-      <Modal
-        visible={resetModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setResetModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Restablecer Contraseña</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Ingresa tu correo electrónico"
-              value={resetEmail}
-              onChangeText={setResetEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalButtonConfirm} onPress={handlePasswordReset}>
-                <Text style={styles.modalButtonText}>Enviar Correo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalButtonCancel} onPress={() => setResetModalVisible(false)}>
-                <Text style={styles.modalButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal de confirmación de correo enviado */}
-      <Modal
-        visible={successModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setSuccessModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>¡Correo Enviado!</Text>
-            <Text style={styles.modalMessage}>
-              Hemos enviado un correo para restablecer tu contraseña. Por favor revisa tu bandeja de entrada.
-            </Text>
-            <TouchableOpacity
-              style={styles.modalButtonConfirm}
-              onPress={() => setSuccessModalVisible(false)}
-            >
-              <Text style={styles.modalButtonText}>Aceptar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    </View>
+    </ImageBackground>
   );
 }
 
-const { width, height } = Dimensions.get('window');
-
 const styles = StyleSheet.create({
-  container: {
+  background: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  backgroundVideo: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
     width: width,
     height: height,
   },
   overlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    width: width,
-    height: height,
-    backgroundColor: 'rgba(0,0,0,0.4)', // Superposición oscura semi-transparente
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 0,
   },
-  content: {
+  container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    zIndex: 1,
+  },
+  loginContainer: {
+    width: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    padding: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 15,
+    elevation: 5,
   },
   logo: {
     width: 100,
     height: 100,
-    marginBottom: 20,
     borderRadius: 50,
+    marginBottom: 20,
     borderWidth: 3,
-    borderColor: '#fff',
+    borderColor: '#4A90E2',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#4A90E2',
     marginBottom: 20,
-    color: '#fff', // Texto en color blanco para contraste
-  },
-  label: {
-    alignSelf: 'flex-start',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 10,
-    color: '#fff', // Texto en color blanco para contraste
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderColor: '#ddd',
-    marginBottom: 20,
-    width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.8)', // Fondo semi-transparente
-    borderRadius: 8,
-    paddingHorizontal: 10,
-  },
-  icon: {
-    marginRight: 10,
   },
   input: {
-    flex: 1,
-    height: 40,
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 12,
     fontSize: 16,
-    color: '#2c3e50',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    color: '#333',
   },
   button: {
-    backgroundColor: '#2ecc71',
+    backgroundColor: '#4A90E2',
     paddingVertical: 12,
-    paddingHorizontal: 40,
     borderRadius: 8,
-    marginTop: 20,
-    alignItems: 'center',
     width: '100%',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
-  },
-  signUpText: {
-    marginTop: 20,
-    color: '#3498db',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  forgotText: {
-    marginTop: 10,
-    color: '#e74c3c',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContainer: {
-    width: '85%',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  modalMessage: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 16,
-    marginBottom: 10,
-    width: '100%',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  modalButtonConfirm: {
-    backgroundColor: '#2ecc71',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    marginTop: 10,
-    flex: 1,
-    marginRight: 5,
-    alignItems: 'center',
-  },
-  modalButtonCancel: {
-    backgroundColor: '#e74c3c',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    marginTop: 10,
-    flex: 1,
-    marginLeft: 5,
-    alignItems: 'center',
-  },
-  modalButtonText: {
-    color: '#fff',
     fontWeight: 'bold',
   },
 });

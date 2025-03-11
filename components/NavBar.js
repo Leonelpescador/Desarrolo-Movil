@@ -2,18 +2,18 @@
 import React, { useState } from 'react';
 import { 
   View, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Image, 
   Text, 
+  TouchableOpacity, 
   Modal, 
-  ScrollView 
+  ScrollView, 
+  Image, 
+  StyleSheet 
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function NavBar() {
+const Base = ({ children, userType }) => {
   const navigation = useNavigation();
   const [menuVisible, setMenuVisible] = useState(false);
   const [enfermeriaExpanded, setEnfermeriaExpanded] = useState(false);
@@ -27,38 +27,43 @@ export default function NavBar() {
   const toggleEnfermeria = () => setEnfermeriaExpanded(prev => !prev);
 
   const handleLogout = async () => {
-    // Limpia el token y otros datos de AsyncStorage si es necesario
+    // Limpia el token y otros datos (si es necesario)
     try {
       await AsyncStorage.removeItem('token');
       await AsyncStorage.removeItem('userType');
     } catch (error) {
-      console.error('Error limpiando AsyncStorage:', error);
+      console.error('Error al limpiar AsyncStorage:', error);
     }
     closeMenu();
-    navigation.navigate('Login'); // Redirige a la pantalla de Login (o a tu flujo de logout)
+    navigation.navigate('Login'); // Redirige al login
   };
 
   return (
-    <View style={styles.headerContainer}>
-      {/* Botón hamburguesa para abrir el menú lateral */}
-      <TouchableOpacity onPress={openMenu} style={styles.hamburger}>
-        <Icon name="bars" size={24} color="#fff" />
-      </TouchableOpacity>
-
-      {/* Logo en el centro */}
-      <View style={styles.logoContainer}>
-        <Image
-          source={require('../assets/logos-de-cenesa_sombra.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={openMenu} style={styles.hamburger}>
+          <Icon name="bars" size={24} color="#fff" />
+        </TouchableOpacity>
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('../assets/logos-de-cenesa_sombra.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
       </View>
 
-      {/* Modal del menú lateral */}
+      {/* Contenido dinámico */}
+      <View style={styles.content}>
+        {children}
+      </View>
+
+      {/* Menú lateral en Modal */}
       <Modal
         visible={menuVisible}
         animationType="slide"
-        transparent={true}
+        transparent
         onRequestClose={closeMenu}
       >
         <View style={styles.modalOverlay}>
@@ -75,37 +80,42 @@ export default function NavBar() {
                   <Icon name="times" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
+
               {/* Menú principal */}
               <View style={styles.menuContent}>
-                {/* Enfermería: Con submenú */}
-                <TouchableOpacity style={styles.menuItem} onPress={toggleEnfermeria}>
-                  <Icon name="user-nurse" size={16} color="#fff" style={styles.menuIcon} />
-                  <Text style={styles.menuText}>Enfermería</Text>
-                  <Icon 
-                    name={enfermeriaExpanded ? "chevron-up" : "chevron-down"} 
-                    size={14} color="#fff" style={styles.menuIcon} 
-                  />
-                </TouchableOpacity>
-                {enfermeriaExpanded && (
-                  <View style={styles.submenu}>
-                    <TouchableOpacity 
-                      style={styles.submenuItem} 
-                      onPress={() => { closeMenu(); navigation.navigate('ListarSolicitudesEnfermeria'); }}
-                    >
-                      <Icon name="list" size={14} color="#fff" style={styles.submenuIcon} />
-                      <Text style={styles.submenuText}>Solicitudes de Enfermería</Text>
+                {/* Ejemplo: opción de Enfermería con submenú */}
+                {(userType === 'admin' || userType === 'Farmacia' || userType === 'enfermero' || userType === 'sup-enfermero') && (
+                  <>
+                    <TouchableOpacity style={styles.menuItem} onPress={toggleEnfermeria}>
+                      <Icon name="user-nurse" size={16} color="#fff" style={styles.menuIcon} />
+                      <Text style={styles.menuText}>Enfermería</Text>
+                      <Icon 
+                        name={enfermeriaExpanded ? "chevron-up" : "chevron-down"} 
+                        size={14} color="#fff" style={styles.menuIcon} 
+                      />
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.submenuItem} 
-                      onPress={() => { closeMenu(); navigation.navigate('CrearSolicitudEnfermeria'); }}
-                    >
-                      <Icon name="plus-square" size={14} color="#fff" style={styles.submenuIcon} />
-                      <Text style={styles.submenuText}>Crear Solicitud de Enfermería</Text>
-                    </TouchableOpacity>
-                  </View>
+                    {enfermeriaExpanded && (
+                      <View style={styles.submenu}>
+                        <TouchableOpacity
+                          style={styles.submenuItem}
+                          onPress={() => { closeMenu(); navigation.navigate('ListarSolicitudesEnfermeria'); }}
+                        >
+                          <Icon name="list" size={14} color="#fff" style={styles.submenuIcon} />
+                          <Text style={styles.submenuText}>Solicitudes de Enfermería</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.submenuItem}
+                          onPress={() => { closeMenu(); navigation.navigate('CrearSolicitudEnfermeria'); }}
+                        >
+                          <Icon name="plus-square" size={14} color="#fff" style={styles.submenuIcon} />
+                          <Text style={styles.submenuText}>Crear Solicitud de Enfermería</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </>
                 )}
 
-                {/* Cerrar Sesión */}
+                {/* Opción para Cerrar Sesión */}
                 <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
                   <Icon name="sign-out-alt" size={16} color="#fff" style={styles.menuIcon} />
                   <Text style={styles.menuText}>Cerrar Sesión</Text>
@@ -117,10 +127,15 @@ export default function NavBar() {
       </Modal>
     </View>
   );
-}
+};
+
+export default Base;
 
 const styles = StyleSheet.create({
-  headerContainer: {
+  container: {
+    flex: 1,
+  },
+  header: {
     height: 60,
     backgroundColor: '#212529',
     flexDirection: 'row',
@@ -138,6 +153,9 @@ const styles = StyleSheet.create({
   logo: {
     height: 40,
     width: 150,
+  },
+  content: {
+    flex: 1,
   },
   modalOverlay: {
     flex: 1,

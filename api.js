@@ -1,5 +1,5 @@
 // api.js
-const API_BASE_URL = "http://192.168.68.55:88/api"; // Reemplaza con tu IP o dominio
+const API_BASE_URL = "http:192.168.202.249:1000//api"; // Reemplaza con tu IP o dominio
 
 export async function getFormularios() {
     try {

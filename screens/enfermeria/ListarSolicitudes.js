@@ -1,5 +1,6 @@
 // screens/enfermeria/ListarSolicitudes.js
 import React, { useEffect, useState } from 'react';
+
 import {
   View,
   Text,
@@ -14,6 +15,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+
 
 const SOLICITUDES_API_URL = "http://186.123.103.68:88/api/solicitudenfermeria/?format=json";
 const PAGE_SIZE = 20;
@@ -205,23 +207,8 @@ export default function ListarSolicitudes() {
         )}
         <Text style={styles.cardText}>Fecha: {new Date(item.fecha_creacion).toLocaleString()}</Text>
       </View>
-      <View style={styles.cardFooter}>
-        {item.estado === 'pendiente' && (userRole === 'admin' || userRole === 'Farmacia') && (
-          <TouchableOpacity style={styles.buttonConfirm} onPress={() => confirmEntrega(item.id)}>
-            <Text style={styles.buttonText}>Confirmar Entrega</Text>
-          </TouchableOpacity>
-        )}
-        {(userRole === 'admin' || userRole === 'Farmacia' || userRole === 'sup-enfermero' || userRole === 'enfermero') && (
-          <TouchableOpacity style={styles.buttonEdit} onPress={() => navigation.navigate('EditarSolicitudEnfermeria', { id: item.id })}>
-            <Text style={styles.buttonText}>Editar</Text>
-          </TouchableOpacity>
-        )}
-        {(userRole === 'admin' || userRole === 'Farmacia' || (item.usuario && item.usuario.id === 1)) && (
-          <TouchableOpacity style={styles.buttonDelete} onPress={() => { setSolicitudToDelete(item); setDeleteModalVisible(true); }}>
-            <Text style={styles.buttonText}>Eliminar</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      
+      
     </View>
   );
 
@@ -247,22 +234,7 @@ export default function ListarSolicitudes() {
         <TouchableOpacity style={styles.buttonPrimary} onPress={() => navigation.navigate('CrearSolicitudEnfermeria')}>
           <Text style={styles.buttonText}>Crear Solicitud</Text>
         </TouchableOpacity>
-        {(userRole === 'admin' || userRole === 'Farmacia') && (
-          <>
-            <TouchableOpacity style={styles.buttonPrimary} onPress={() => navigation.navigate('ListarCajas')}>
-              <Text style={styles.buttonText}>Listar Cajas</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.buttonPrimary} onPress={() => navigation.navigate('CrearCaja')}>
-              <Text style={styles.buttonText}>Crear Caja</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.buttonPrimary} onPress={() => navigation.navigate('ListarMedicamentosEnfermeria')}>
-              <Text style={styles.buttonText}>Listar Medicamentos</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.buttonSecondary} onPress={() => navigation.navigate('ListarDescartablesEnfermeria')}>
-              <Text style={styles.buttonText}>Listar Descartables</Text>
-            </TouchableOpacity>
-          </>
-        )}
+      
       </View>
 
       {/* Filtros */}
@@ -287,18 +259,7 @@ export default function ListarSolicitudes() {
             onChangeText={setUsuarioFiltro}
           />
         )}
-        <TextInput
-          style={styles.filterInput}
-          placeholder="Fecha Inicio (YYYY-MM-DD)"
-          value={fechaInicio}
-          onChangeText={setFechaInicio}
-        />
-        <TextInput
-          style={styles.filterInput}
-          placeholder="Fecha Fin (YYYY-MM-DD)"
-          value={fechaFin}
-          onChangeText={setFechaFin}
-        />
+        
         <View style={styles.filterPickerContainer}>
           <Picker
             selectedValue={estadoFiltro}
@@ -343,30 +304,7 @@ export default function ListarSolicitudes() {
         </TouchableOpacity>
       </View>
 
-      {/* Modal de confirmación para eliminar solicitud */}
-      <Modal
-        visible={deleteModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setDeleteModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.deleteModalContainer}>
-            <Text style={styles.modalTitle}>Eliminar Solicitud</Text>
-            <Text style={styles.modalMessage}>
-              ¿Estás seguro de eliminar la solicitud de {solicitudToDelete ? `${solicitudToDelete.apellido_paciente} ${solicitudToDelete.nombre_paciente}` : ""}?
-            </Text>
-            <View style={styles.modalButtonContainer}>
-              <TouchableOpacity style={styles.modalButton} onPress={() => setDeleteModalVisible(false)}>
-                <Text style={styles.modalButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalButton, styles.modalButtonDelete]} onPress={deleteSolicitud}>
-                <Text style={styles.modalButtonText}>Eliminar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      
     </View>
   );
 }

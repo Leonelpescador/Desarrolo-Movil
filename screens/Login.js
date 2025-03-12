@@ -1,4 +1,3 @@
-// screens/LoginScreen.js
 import React, { useState } from 'react';
 import {
   View,
@@ -16,33 +15,32 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
-// Asegúrate de que esta URL sea la de tu servidor Django
-const API_BASE_URL = "http://186.123.103.68:88/api";
+// URL de la API
+const API_BASE_URL = "http://gestiones.cenesa.com.ar:88/api";
 
 export default function LoginScreen() {
   const navigation = useNavigation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
+  // Función para manejar el inicio de sesión
   const handleLogin = async () => {
     if (!username || !password) {
       Alert.alert("Error", "Debes ingresar usuario y contraseña.");
       return;
     }
     try {
-      // Enviar credenciales a tu endpoint de autenticación
       const response = await fetch(`${API_BASE_URL}/token/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-      
+
       if (!response.ok) {
         throw new Error("Credenciales inválidas o error en la conexión.");
       }
-      
+
       const data = await response.json();
-      // Se espera que la respuesta tenga una clave 'access' con el token
       if (data && data.access) {
         await AsyncStorage.setItem('token', data.access);
         Alert.alert("Éxito", "Inicio de sesión correcto.");
@@ -55,15 +53,17 @@ export default function LoginScreen() {
     }
   };
 
+  // Función para abrir WebView con un enlace específico
+  const openWebView = (url) => {
+    navigation.navigate('WebView', { url });
+  };
+
   return (
     <ImageBackground
-      source={require('../assets/fondo1.jpg')}
+      source={require('../assets/fondo3.jpg')}
       style={styles.background}
       resizeMode="cover"
     >
-      {/* Overlay (opcional, descomenta si deseas overlay) */}
-      {/* <View style={styles.overlay} /> */}
-
       <View style={styles.container}>
         <View style={styles.loginContainer}>
           <Image
@@ -92,31 +92,43 @@ export default function LoginScreen() {
           <TouchableOpacity style={styles.button} onPress={handleLogin}>
             <Text style={styles.buttonText}>Iniciar Sesión</Text>
           </TouchableOpacity>
+
+          {/* Enlaces de recuperación y registro */}
+          <View style={styles.linkContainer}>
+            <TouchableOpacity onPress={() => openWebView('http://gestiones.cenesa.com.ar:88/registrar/')}>
+              <Text style={styles.linkText}>Regístrate aquí</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => openWebView('http://gestiones.cenesa.com.ar:88/recuperar-contrasena/')}>
+              <Text style={styles.linkText}>¿Olvidaste tu contraseña?</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => openWebView('http://gestiones.cenesa.com.ar:88/recuperar-usuario/')}>
+              <Text style={styles.linkText}>¿Olvidaste tu nombre de usuario?</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Destacado "Desarrollado por Pescador Leonel" */}
+          <TouchableOpacity onPress={() => openWebView('https://www.instagram.com/leonelpescador/')}>
+            <Text style={styles.developerText}>Desrrollado por Pescador Leonel</Text>
+            <Text style={styles.developerLink}></Text>
+          </TouchableOpacity>
         </View>
       </View>
     </ImageBackground>
   );
 }
 
+// Estilos del login
 const styles = StyleSheet.create({
   background: {
     flex: 1,
     width: width,
     height: height,
   },
-  overlay: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    zIndex: 0,
-  },
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-    zIndex: 1,
   },
   loginContainer: {
     width: '100%',
@@ -167,5 +179,28 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  linkContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  linkText: {
+    color: '#007bff',
+    fontSize: 16,
+    marginVertical: 5,
+    textDecorationLine: 'underline',
+  },
+  developerText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 20,
+    textDecorationLine: 'underline',
+  },
+  developerLink: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#007bff',
+    textDecorationLine: 'underline',
   },
 });

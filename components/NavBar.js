@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -15,19 +14,22 @@ import Icon from 'react-native-vector-icons/FontAwesome5';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-
-
 const Base = ({ children, userType }) => {
     const navigation = useNavigation();
     const [menuVisible, setMenuVisible] = useState(false);
     const [enfermeriaExpanded, setEnfermeriaExpanded] = useState(false);
+    const [animation] = useState(new Animated.Value(-300));
 
-    const openMenu = () => setMenuVisible(true);
-    const closeMenu = () => {
-        setMenuVisible(false);
-        setEnfermeriaExpanded(false);
-    };
+    useEffect(() => {
+        Animated.timing(animation, {
+            toValue: menuVisible ? 0 : -300,
+            duration: 300,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: false,
+        }).start();
+    }, [menuVisible]);
 
+    const toggleMenu = () => setMenuVisible(!menuVisible);
     const toggleEnfermeria = () => setEnfermeriaExpanded(prev => !prev);
 
     const handleLogout = async () => {
@@ -37,35 +39,34 @@ const Base = ({ children, userType }) => {
         } catch (error) {
             console.error('Error al limpiar AsyncStorage:', error);
         }
-        closeMenu();
+        setMenuVisible(false);
         navigation.navigate('Login');
     };
 
     return (
         <View style={styles.container}>
+            {/* HEADER/NAVBAR */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={openMenu} style={styles.hamburger}>
-                    <Icon name="bars" size={24} color="#fff" />
+                <TouchableOpacity onPress={toggleMenu} style={styles.hamburger}>
+                    <Icon name="bars" size={22} color="#fff" />
                 </TouchableOpacity>
-                <View style={styles.logoContainer}>
-                    <Image
-                        source={require('../assets/logos-de-cenesa_sombra.png')}
-                        style={styles.logo}
-                        resizeMode="contain"
-                    />
-                </View>
+                <Image
+                    source={require('../assets/logos-de-cenesa_sombra.png')}
+                    style={styles.logo}
+                    resizeMode="contain"
+                />
+                <TouchableOpacity onPress={handleLogout} style={styles.logout}>
+                    <Icon name="sign-out-alt" size={22} color="#fff" />
+                </TouchableOpacity>
             </View>
 
+            {/* CONTENIDO */}
             <View style={styles.content}>{children}</View>
 
-            <Modal
-                visible={menuVisible}
-                animationType="slide"
-                transparent
-                onRequestClose={closeMenu}
-            >
+            {/* MENU LATERAL */}
+            <Modal visible={menuVisible} transparent animationType="none">
                 <View style={styles.modalOverlay}>
-                    <View style={styles.menuContainer}>
+                    <Animated.View style={[styles.menuContainer, { left: animation }]}>
                         <ScrollView>
                             <View style={styles.menuHeader}>
                                 <Image
@@ -73,7 +74,7 @@ const Base = ({ children, userType }) => {
                                     style={styles.menuLogo}
                                     resizeMode="contain"
                                 />
-                                <TouchableOpacity onPress={closeMenu} style={styles.closeButton}>
+                                <TouchableOpacity onPress={toggleMenu} style={styles.closeButton}>
                                     <Icon name="times" size={24} color="#fff" />
                                 </TouchableOpacity>
                             </View>
@@ -82,11 +83,11 @@ const Base = ({ children, userType }) => {
                                 {(userType === 'admin' || userType === 'Farmacia' || userType === 'enfermero' || userType === 'sup-enfermero') && (
                                     <>
                                         <TouchableOpacity style={styles.menuItem} onPress={toggleEnfermeria}>
-                                            <Icon name="user-nurse" size={16} color="#fff" style={styles.menuIcon} />
+                                            <Icon name="user-nurse" size={18} color="#fff" style={styles.menuIcon} />
                                             <Text style={styles.menuText}>Enfermería</Text>
                                             <Icon
                                                 name={enfermeriaExpanded ? 'chevron-up' : 'chevron-down'}
-                                                size={14}
+                                                size={16}
                                                 color="#fff"
                                                 style={styles.menuIcon}
                                             />
@@ -96,35 +97,30 @@ const Base = ({ children, userType }) => {
                                                 <TouchableOpacity
                                                     style={styles.submenuItem}
                                                     onPress={() => {
-                                                        closeMenu();
+                                                        setMenuVisible(false);
                                                         navigation.navigate('ListarSolicitudesEnfermeria');
                                                     }}
                                                 >
-                                                    <Icon name="list" size={14} color="#fff" style={styles.submenuIcon} />
+                                                    <Icon name="list" size={16} color="#fff" style={styles.submenuIcon} />
                                                     <Text style={styles.submenuText}>Solicitudes de Enfermería</Text>
                                                 </TouchableOpacity>
                                                 <TouchableOpacity
                                                     style={styles.submenuItem}
                                                     onPress={() => {
-                                                        closeMenu();
+                                                        setMenuVisible(false);
                                                         navigation.navigate('CrearSolicitudEnfermeria');
                                                     }}
                                                 >
-                                                    <Icon name="plus-square" size={14} color="#fff" style={styles.submenuIcon} />
+                                                    <Icon name="plus-square" size={16} color="#fff" style={styles.submenuIcon} />
                                                     <Text style={styles.submenuText}>Crear Solicitud de Enfermería</Text>
                                                 </TouchableOpacity>
                                             </View>
                                         )}
                                     </>
                                 )}
-
-                                <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-                                    <Icon name="sign-out-alt" size={16} color="#fff" style={styles.menuIcon} />
-                                    <Text style={styles.menuText}>Cerrar Sesión</Text>
-                                </TouchableOpacity>
                             </View>
                         </ScrollView>
-                    </View>
+                    </Animated.View>
                 </View>
             </Modal>
         </View>
@@ -138,40 +134,41 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     header: {
-        height: 60,
-        backgroundColor: '#37474f', // Fondo más oscuro
+        height: 70,
+        backgroundColor: '#37474F', 
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 10,
         justifyContent: 'space-between',
-        elevation: 3, // Sombra sutil
+        paddingHorizontal: 15,
+        elevation: 5,
     },
     hamburger: {
         padding: 10,
     },
-    logoContainer: {
-        flex: 1,
-        alignItems: 'center',
+    logout: {
+        padding: 10,
     },
     logo: {
-        height: 40,
-        width: 150,
+        height: 45,
+        width: 160,
     },
     content: {
         flex: 1,
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.7)',
+        backgroundColor: 'rgba(0,0,0,0.5)',
     },
     menuContainer: {
-        width: '80%',
-        backgroundColor: '#455a64', // Fondo del menú más oscuro
+        width: '75%',
+        backgroundColor: '#2C3E50',
         paddingVertical: 20,
-        paddingHorizontal: 10,
-        elevation: 5, // Sombra del menú
-        borderTopRightRadius:10,
-        borderBottomRightRadius:10,
+        paddingHorizontal: 15,
+        position: 'absolute',
+        height: '100%',
+        borderTopRightRadius: 15,
+        borderBottomRightRadius: 15,
+        elevation: 10,
     },
     menuHeader: {
         flexDirection: 'row',
@@ -190,14 +187,19 @@ const styles = StyleSheet.create({
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 10,
+        paddingVertical: 12,
+        paddingHorizontal: 10,
+        borderRadius: 10,
+        marginVertical: 5,
+        backgroundColor: 'rgba(255,255,255,0.1)',
     },
     menuIcon: {
         marginHorizontal: 8,
     },
     menuText: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: 18,
+        flex: 1,
     },
     submenu: {
         marginLeft: 32,
@@ -206,14 +208,17 @@ const styles = StyleSheet.create({
     submenuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 6,
-        paddingHorizontal: 8,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        borderRadius: 8,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        marginVertical: 3,
     },
     submenuIcon: {
         marginRight: 6,
     },
     submenuText: {
         color: '#fff',
-        fontSize: 14,
+        fontSize: 16,
     },
 });

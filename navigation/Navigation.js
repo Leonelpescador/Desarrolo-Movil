@@ -5,15 +5,16 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+
 // Importa tus pantallas
 import Login from '../screens/Login';
-import SignUp from '../screens/SignUp';
 import Home from '../screens/Home';
 import CrearSolicitud from '../screens/enfermeria/CrearSolicitud';
 import EditarSolicitud from '../screens/enfermeria/EditarSolicitud';
 import EliminarSolicitud from '../screens/enfermeria/EliminarSolicitud';
 import ListarSolicitudes from '../screens/enfermeria/ListarSolicitudes';
 import Logout from '../screens/Logout';
+import WebViewScreen from '../screens/WebViewScreen';
 
 const Stack = createStackNavigator();
 
@@ -53,11 +54,6 @@ export default function Navigation() {
           options={{ headerShown: false }}
         />
         <Stack.Screen 
-          name="SignUp" 
-          component={SignUp} 
-          options={{ title: "Registrarse" }} 
-        />
-        <Stack.Screen 
           name="Home" 
           component={Home} 
           options={{ headerShown: false }}
@@ -87,6 +83,13 @@ export default function Navigation() {
           component={Logout} 
           options={{ headerShown: false }}
         />
+        <Stack.Screen 
+          name="WebView" 
+          component={WebViewScreen} 
+          options={{ title: "Sitio Web" }}
+        />
+
+
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -16,12 +16,12 @@ import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 
-const SOLICITUD_API_URL = "http://186.123.103.68:88/api/solicitudenfermeria/?format=json";
-const CAJA_API_URL = "http://186.123.103.68:88/api/caja/?format=json";
-const SECTOR_API_URL = "http://186.123.103.68:88/api/sector/?format=json";
-const CAMA_API_URL = "http://186.123.103.68:88/api/cama/?format=json";
-const MEDICAMENTO_API_URL = "http://186.123.103.68:88/api/medicamenfermeria/?format=json";
-const DESCARTABLE_API_URL = "http://186.123.103.68:88/api/descartableenfermeria/?format=json";
+const SOLICITUD_API_URL = "http://gestiones.cenesa.com.ar:88/api/solicitudenfermeria/?format=json";
+const CAJA_API_URL = "http://gestiones.cenesa.com.ar:88/api/caja/?format=json";
+const SECTOR_API_URL = "http://gestiones.cenesa.com.ar:88/api/sector/?format=json";
+const CAMA_API_URL = "http://gestiones.cenesa.com.ar:88/api/cama/?format=json";
+const MEDICAMENTO_API_URL = "http://gestiones.cenesa.com.ar:88/api/medicamenfermeria/?format=json";
+const DESCARTABLE_API_URL = "http://gestiones.cenesa.com.ar:88/api/descartableenfermeria/?format=json";
 
 export default function CrearSolicitud() {
   const navigation = useNavigation();

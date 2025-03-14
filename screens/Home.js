@@ -14,7 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Base from '../components/NavBar';
 
-const NOVEDADES_API_URL = "http://gestiones.cenesa.com.ar:88/api/novedad/?format=json";
+const NOVEDADES_API_URL = "https://gestiones.cenesa.com.ar:88/api/novedad/?format=json";
 
 export default function Home() {
   const navigation = useNavigation();

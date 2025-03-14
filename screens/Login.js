@@ -16,7 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const { width, height } = Dimensions.get('window');
 
 // URL de la API
-const API_BASE_URL = "http://gestiones.cenesa.com.ar:88/api";
+const API_BASE_URL = "https://gestiones.cenesa.com.ar:88/api";
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -95,13 +95,13 @@ export default function LoginScreen() {
 
           {/* Enlaces de recuperación y registro */}
           <View style={styles.linkContainer}>
-            <TouchableOpacity onPress={() => openWebView('http://gestiones.cenesa.com.ar:88/registrar/')}>
+            <TouchableOpacity onPress={() => openWebView('https://gestiones.cenesa.com.ar:88/registrar/')}>
               <Text style={styles.linkText}>Regístrate aquí</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => openWebView('http://gestiones.cenesa.com.ar:88/recuperar-contrasena/')}>
+            <TouchableOpacity onPress={() => openWebView('https://gestiones.cenesa.com.ar:88/recuperar-contrasena/')}>
               <Text style={styles.linkText}>¿Olvidaste tu contraseña?</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => openWebView('http://gestiones.cenesa.com.ar:88/recuperar-usuario/')}>
+            <TouchableOpacity onPress={() => openWebView('https://gestiones.cenesa.com.ar:88/recuperar-usuario/')}>
               <Text style={styles.linkText}>¿Olvidaste tu nombre de usuario?</Text>
             </TouchableOpacity>
           </View>

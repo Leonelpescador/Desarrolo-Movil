@@ -17,7 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 
 
-const SOLICITUDES_API_URL = "http://gestiones.cenesa.com.ar:88/api/solicitudenfermeria/?format=json";
+const SOLICITUDES_API_URL = "https://gestiones.cenesa.com.ar:88/api/solicitudenfermeria/?format=json";
 const PAGE_SIZE = 20;
 
 export default function ListarSolicitudes() {

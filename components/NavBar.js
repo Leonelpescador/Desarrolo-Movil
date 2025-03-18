@@ -9,6 +9,7 @@ import {
     StyleSheet,
     Animated,
     Easing,
+    SafeAreaView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { useNavigation } from '@react-navigation/native';
@@ -44,103 +45,109 @@ const Base = ({ children, userType }) => {
     };
 
     return (
-        <View style={styles.container}>
-            {/* HEADER/NAVBAR */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={toggleMenu} style={styles.hamburger}>
-                    <Icon name="bars" size={22} color="#fff" />
-                </TouchableOpacity>
-                <Image
-                    source={require('../assets/logos-de-cenesa_sombra.png')}
-                    style={styles.logo}
-                    resizeMode="contain"
-                />
-                <TouchableOpacity onPress={handleLogout} style={styles.logout}>
-                    <Icon name="sign-out-alt" size={22} color="#fff" />
-                </TouchableOpacity>
-            </View>
-
-            {/* CONTENIDO */}
-            <View style={styles.content}>{children}</View>
-
-            {/* MENU LATERAL */}
-            <Modal visible={menuVisible} transparent animationType="none">
-                <View style={styles.modalOverlay}>
-                    <Animated.View style={[styles.menuContainer, { left: animation }]}>
-                        <ScrollView>
-                            <View style={styles.menuHeader}>
-                                <Image
-                                    source={require('../assets/logos-de-cenesa_sombra.png')}
-                                    style={styles.menuLogo}
-                                    resizeMode="contain"
-                                />
-                                <TouchableOpacity onPress={toggleMenu} style={styles.closeButton}>
-                                    <Icon name="times" size={24} color="#fff" />
-                                </TouchableOpacity>
-                            </View>
-
-                            <View style={styles.menuContent}>
-                                {(userType === 'admin' || userType === 'Farmacia' || userType === 'enfermero' || userType === 'sup-enfermero') && (
-                                    <>
-                                        <TouchableOpacity style={styles.menuItem} onPress={toggleEnfermeria}>
-                                            <Icon name="user-nurse" size={18} color="#fff" style={styles.menuIcon} />
-                                            <Text style={styles.menuText}>Enfermería</Text>
-                                            <Icon
-                                                name={enfermeriaExpanded ? 'chevron-up' : 'chevron-down'}
-                                                size={16}
-                                                color="#fff"
-                                                style={styles.menuIcon}
-                                            />
-                                        </TouchableOpacity>
-                                        {enfermeriaExpanded && (
-                                            <View style={styles.submenu}>
-                                                <TouchableOpacity
-                                                    style={styles.submenuItem}
-                                                    onPress={() => {
-                                                        setMenuVisible(false);
-                                                        navigation.navigate('ListarSolicitudesEnfermeria');
-                                                    }}
-                                                >
-                                                    <Icon name="list" size={16} color="#fff" style={styles.submenuIcon} />
-                                                    <Text style={styles.submenuText}>Solicitudes de Enfermería</Text>
-                                                </TouchableOpacity>
-                                                <TouchableOpacity
-                                                    style={styles.submenuItem}
-                                                    onPress={() => {
-                                                        setMenuVisible(false);
-                                                        navigation.navigate('CrearSolicitudEnfermeria');
-                                                    }}
-                                                >
-                                                    <Icon name="plus-square" size={16} color="#fff" style={styles.submenuIcon} />
-                                                    <Text style={styles.submenuText}>Crear Solicitud de Enfermería</Text>
-                                                </TouchableOpacity>
-                                            </View>
-                                        )}
-                                    </>
-                                )}
-                                { /*Manuales*/ }
-                                <TouchableOpacity
-                                    style={styles.menuItem}
-                                    onPress={() => {
-                                        setMenuVisible(false);
-                                        navigation.navigate('Manual');
-                                    }}
-                                >
-                                    <Icon name="book" size={18} color="#fff" style={styles.menuIcon} />
-                                    <Text style={styles.menuText}>Manual</Text>
-                                </TouchableOpacity>   
-                            </View>
-                        </ScrollView>
-                    </Animated.View>
+        <SafeAreaView style={styles.safeArea}>
+            <View style={styles.container}>
+                {/* HEADER/NAVBAR */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={toggleMenu} style={styles.hamburger}>
+                        <Icon name="bars" size={22} color="#fff" />
+                    </TouchableOpacity>
+                    <Image
+                        source={require('../assets/logos-de-cenesa_sombra.png')}
+                        style={styles.logo}
+                        resizeMode="contain"
+                    />
+                    <TouchableOpacity onPress={handleLogout} style={styles.logout}>
+                        <Icon name="sign-out-alt" size={22} color="#fff" />
+                    </TouchableOpacity>
                 </View>
-            </Modal>
-        </View>
+
+                {/* CONTENIDO */}
+                <View style={styles.content}>{children}</View>
+
+                {/* MENU LATERAL */}
+                <Modal visible={menuVisible} transparent animationType="none">
+                    <View style={styles.modalOverlay}>
+                        <Animated.View style={[styles.menuContainer, { left: animation }]}>
+                            <ScrollView>
+                                <View style={styles.menuHeader}>
+                                    <Image
+                                        source={require('../assets/logos-de-cenesa_sombra.png')}
+                                        style={styles.menuLogo}
+                                        resizeMode="contain"
+                                    />
+                                    <TouchableOpacity onPress={toggleMenu} style={styles.closeButton}>
+                                        <Icon name="times" size={24} color="#fff" />
+                                    </TouchableOpacity>
+                                </View>
+
+                                <View style={styles.menuContent}>
+                                    {(userType === 'admin' || userType === 'Farmacia' || userType === 'enfermero' || userType === 'sup-enfermero') && (
+                                        <>
+                                            <TouchableOpacity style={styles.menuItem} onPress={toggleEnfermeria}>
+                                                <Icon name="user-nurse" size={18} color="#fff" style={styles.menuIcon} />
+                                                <Text style={styles.menuText}>Enfermería</Text>
+                                                <Icon
+                                                    name={enfermeriaExpanded ? 'chevron-up' : 'chevron-down'}
+                                                    size={16}
+                                                    color="#fff"
+                                                    style={styles.menuIcon}
+                                                />
+                                            </TouchableOpacity>
+                                            {enfermeriaExpanded && (
+                                                <View style={styles.submenu}>
+                                                    <TouchableOpacity
+                                                        style={styles.submenuItem}
+                                                        onPress={() => {
+                                                            setMenuVisible(false);
+                                                            navigation.navigate('ListarSolicitudesEnfermeria');
+                                                        }}
+                                                    >
+                                                        <Icon name="list" size={16} color="#fff" style={styles.submenuIcon} />
+                                                        <Text style={styles.submenuText}>Solicitudes de Enfermería</Text>
+                                                    </TouchableOpacity>
+                                                    <TouchableOpacity
+                                                        style={styles.submenuItem}
+                                                        onPress={() => {
+                                                            setMenuVisible(false);
+                                                            navigation.navigate('CrearSolicitudEnfermeria');
+                                                        }}
+                                                    >
+                                                        <Icon name="plus-square" size={16} color="#fff" style={styles.submenuIcon} />
+                                                        <Text style={styles.submenuText}>Crear Solicitud de Enfermería</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            )}
+                                        </>
+                                    )}
+                                    { /*Manuales*/ }
+                                    <TouchableOpacity
+                                        style={styles.menuItem}
+                                        onPress={() => {
+                                            setMenuVisible(false);
+                                            navigation.navigate('Manual');
+                                        }}
+                                    >
+                                        <Icon name="book" size={18} color="#fff" style={styles.menuIcon} />
+                                        <Text style={styles.menuText}>Manual</Text>
+                                    </TouchableOpacity>   
+                                </View>
+                            </ScrollView>
+                        </Animated.View>
+                    </View>
+                </Modal>
+            </View>
+        </SafeAreaView>
     );
 };
 
 export default Base;
 
 const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#37474F', 
+    },
     container: {
         flex: 1,
     },
@@ -194,7 +201,6 @@ const styles = StyleSheet.create({
     closeButton: {
         padding: 10,
     },
-    menuContent: {},
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',

@@ -127,7 +127,7 @@ const Base = ({ children, userType }) => {
                                     }}
                                 >
                                     <Icon name="book" size={18} color="#fff" style={styles.menuIcon} />
-                                    <Text style={styles.menuText}>Manuales</Text>
+                                    <Text style={styles.menuText}>Manual</Text>
                                 </TouchableOpacity>   
                             </View>
                         </ScrollView>

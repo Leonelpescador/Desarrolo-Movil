@@ -26,16 +26,35 @@ export default function Navigation() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const token = await AsyncStorage.getItem('token');
-        setIsAuthenticated(!!token);
+        const token = await AsyncStorage.getItem("token");
+  
+        if (!token) {
+          setIsAuthenticated(false);
+          setIsLoading(false);
+          return;
+        }
+  
+        // 🔹 Verificamos si el token sigue siendo válido haciendo una petición a un endpoint protegido
+        const response = await fetchWithAuth("/manual/");
+  
+        if (response.error === "invalid_token") {
+          setIsAuthenticated(false);
+          setIsLoading(false);
+          return;
+        }
+  
+        setIsAuthenticated(true);
       } catch (error) {
-        console.error("Error al obtener el token:", error);
+        console.error("Error al verificar autenticación:", error);
+        setIsAuthenticated(false);
       } finally {
         setIsLoading(false);
       }
     };
+  
     checkAuth();
   }, []);
+  
 
   if (isLoading) {
     return (

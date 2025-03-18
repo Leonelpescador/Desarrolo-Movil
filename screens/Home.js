@@ -16,6 +16,13 @@ import Base from '../components/NavBar';
 
 const NOVEDADES_API_URL = "https://gestiones.cenesa.com.ar:88/api/novedad/?format=json";
 
+export async function getFormularios() {
+  const response = await fetch(`${API_BASE_URL}/formularios/`, { headers: { "Authorization": `Bearer ${token}` } });
+  const data = await response.json();
+  if (data.code === "token_not_valid") { /* Redirigir a Login */ }
+  return data;
+}
+
 export default function Home() {
   const navigation = useNavigation();
   const [novedades, setNovedades] = useState([]);

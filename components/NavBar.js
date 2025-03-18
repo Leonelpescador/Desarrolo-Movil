@@ -118,6 +118,17 @@ const Base = ({ children, userType }) => {
                                         )}
                                     </>
                                 )}
+                                { /*Manuales*/ }
+                                <TouchableOpacity
+                                    style={styles.menuItem}
+                                    onPress={() => {
+                                        setMenuVisible(false);
+                                        navigation.navigate('Manual');
+                                    }}
+                                >
+                                    <Icon name="book" size={18} color="#fff" style={styles.menuIcon} />
+                                    <Text style={styles.menuText}>Manuales</Text>
+                                </TouchableOpacity>   
                             </View>
                         </ScrollView>
                     </Animated.View>

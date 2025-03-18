@@ -80,10 +80,10 @@ export default function Navigation() {
           options={{ title: "Solicitudes de Enfermería" }}
         />
 
-        <Stack.Screen
-          name='manual'
-          component={Manual}
-          options={{ title:"Manual" }}
+        <Stack.Screen 
+          name="Manual" 
+          component={Manual} 
+          options={{ title: "Manual" }}
         />
 
         <Stack.Screen 

@@ -15,6 +15,7 @@ import EliminarSolicitud from '../screens/enfermeria/EliminarSolicitud';
 import ListarSolicitudes from '../screens/enfermeria/ListarSolicitudes';
 import Logout from '../screens/Logout';
 import WebViewScreen from '../screens/WebViewScreen';
+import Manual from '../screens/Manual/Manual';   
 
 const Stack = createStackNavigator();
 
@@ -78,6 +79,13 @@ export default function Navigation() {
           component={ListarSolicitudes} 
           options={{ title: "Solicitudes de Enfermería" }}
         />
+
+        <Stack.Screen
+          name='manual'
+          component={Manual}
+          options={{ title:"Manual" }}
+        />
+
         <Stack.Screen 
           name="Logout" 
           component={Logout} 

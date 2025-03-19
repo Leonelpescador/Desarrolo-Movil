@@ -43,8 +43,16 @@ export async function fetchWithAuth(endpoint, options = {}) {
 }
 
 // 🔹 Funciones para obtener datos autenticados
+
 export async function getManuales() {
   return fetchWithAuth("/manual/");
+}
+
+export async function getenfermeria() {
+  return fetchWithAuth("/solicitudenfermeria/?format=json");
+}
+export async function getFormularios() {
+  return fetchWithAuth("/perfilusuario/?format=json");
 }
 
 export async function getVideos() {

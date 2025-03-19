@@ -82,7 +82,7 @@ const Base = ({ children, userType }) => {
                                 </View>
 
                                 <View style={styles.menuContent}>
-                                    {(userType === 'admin' || userType === 'Farmacia' || userType === 'enfermero' || userType === 'sup-enfermero') && (
+                                    
                                         <>
                                             <TouchableOpacity style={styles.menuItem} onPress={toggleEnfermeria}>
                                                 <Icon name="user-nurse" size={18} color="#fff" style={styles.menuIcon} />
@@ -119,7 +119,6 @@ const Base = ({ children, userType }) => {
                                                 </View>
                                             )}
                                         </>
-                                    )}
                                     { /*Manuales*/ }
                                     <TouchableOpacity
                                         style={styles.menuItem}

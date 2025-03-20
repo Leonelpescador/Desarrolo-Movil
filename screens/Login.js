@@ -9,26 +9,29 @@ import {
   Image,
   Dimensions,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
-// URL de la API
 const API_BASE_URL = "https://gestiones.cenesa.com.ar:88/api";
 
 export default function LoginScreen() {
   const navigation = useNavigation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // Estado para mostrar/ocultar contraseña
 
-  // Función para manejar el inicio de sesión
   const handleLogin = async () => {
     if (!username || !password) {
       Alert.alert("Error", "Debes ingresar usuario y contraseña.");
       return;
     }
+
+    setLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/token/`, {
         method: 'POST',
@@ -36,8 +39,12 @@ export default function LoginScreen() {
         body: JSON.stringify({ username, password }),
       });
 
-      if (!response.ok) {
-        throw new Error("Credenciales inválidas o error en la conexión.");
+      if (response.status === 400) {
+        throw new Error("Solicitud incorrecta. Verifica tus datos.");
+      } else if (response.status === 401) {
+        throw new Error("Credenciales inválidas.");
+      } else if (!response.ok) {
+        throw new Error("Error en la conexión.");
       }
 
       const data = await response.json();
@@ -50,10 +57,11 @@ export default function LoginScreen() {
       }
     } catch (error) {
       Alert.alert("Error", error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Función para abrir WebView con un enlace específico
   const openWebView = (url) => {
     navigation.navigate('WebView', { url });
   };
@@ -80,20 +88,30 @@ export default function LoginScreen() {
             onChangeText={setUsername}
             autoCapitalize="none"
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Contraseña"
-            placeholderTextColor="#aaa"
-            secureTextEntry={true}
-            value={password}
-            onChangeText={setPassword}
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Contraseña"
+              placeholderTextColor="#aaa"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <Text style={styles.showPasswordText}>
+                {showPassword ? 'Ocultar' : 'Mostrar'}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity style={styles.button} onPress={handleLogin}>
-            <Text style={styles.buttonText}>Iniciar Sesión</Text>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Iniciar Sesión</Text>
+            )}
           </TouchableOpacity>
 
-          {/* Enlaces de recuperación y registro */}
           <View style={styles.linkContainer}>
             <TouchableOpacity onPress={() => openWebView('https://gestiones.cenesa.com.ar:88/registrar/')}>
               <Text style={styles.linkText}>Regístrate aquí</Text>
@@ -106,9 +124,8 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Destacado "Desarrollado por Pescador Leonel" */}
           <TouchableOpacity onPress={() => openWebView('https://www.instagram.com/leonelpescador/')}>
-            <Text style={styles.developerText}>Desrrollado por Pescador Leonel</Text>
+            <Text style={styles.developerText}>Desarrollado por Pescador Leonel</Text>
             <Text style={styles.developerLink}></Text>
           </TouchableOpacity>
         </View>
@@ -117,7 +134,6 @@ export default function LoginScreen() {
   );
 }
 
-// Estilos del login
 const styles = StyleSheet.create({
   background: {
     flex: 1,
@@ -166,6 +182,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
     color: '#333',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginBottom: 20,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 12,
+    fontSize: 16,
+    color: '#333',
+  },
+  showPasswordText: {
+    padding: 10,
+    color: '#007bff',
   },
   button: {
     backgroundColor: '#4A90E2',

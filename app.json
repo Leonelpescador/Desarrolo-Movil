@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "CENESA-ENFERMERIA",
-    "slug": "CENESA",
+    "slug": "cenesa-enfermeria",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -19,10 +19,17 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.leonelpescador.CENESAENFERMERIA"
     },
     "web": {
       "favicon": "./assets/favicon.ico"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9d25f149-75e2-4e16-9262-e8b906ed10de"
+      }
+    },
+    "owner": "leonelpescador"
   }
 }

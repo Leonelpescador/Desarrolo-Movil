@@ -102,7 +102,7 @@ export default function Home() {
         {fotoPerfil ? (
           <Image source={{ uri: fotoPerfil }} style={styles.profileImage} />
         ) : (
-          <Image source={require('../assets/default_profile.png')} style={styles.profileImage} />
+          <Image source={require('../assets/defaultprofile.png')} style={styles.profileImage} />
         )}
         <Text style={styles.profileText}>Hola😀</Text>
       </View>

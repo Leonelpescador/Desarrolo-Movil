@@ -9,25 +9,14 @@ import {
   StyleSheet,
   ActivityIndicator,
   FlatList,
-  Modal,
   Alert,
 } from 'react-native';
 
 // Importa la instancia de Firestore
-import { db } from '../../src/firebase'; // Ajusta la ruta según tu estructura de carpetas
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  doc,
-  deleteDoc,
-  updateDoc,
-} from 'firebase/firestore';
+import { db } from '../../src/firebase'; // Ajusta la ruta a tu archivo firebase.js
+import { collection, getDocs } from 'firebase/firestore';
 
 import { Picker } from '@react-native-picker/picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 
 const PAGE_SIZE = 20;
@@ -35,15 +24,14 @@ const PAGE_SIZE = 20;
 export default function ListarSolicitudes() {
   const navigation = useNavigation();
 
-  // Estados de filtros
+  // Filtros
   const [apellidoPaciente, setApellidoPaciente] = useState("");
   const [nombrePaciente, setNombrePaciente] = useState("");
-  const [usuarioFiltro, setUsuarioFiltro] = useState("");
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState("");
 
-  // Estados para la data completa y filtrada
+  // Estados para la data y su filtrado
   const [allSolicitudes, setAllSolicitudes] = useState([]);
   const [filteredSolicitudes, setFilteredSolicitudes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,31 +40,19 @@ export default function ListarSolicitudes() {
   const [currentPage, setCurrentPage] = useState(1);
   const [paginatedSolicitudes, setPaginatedSolicitudes] = useState([]);
 
-  // Modal de eliminación
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [solicitudToDelete, setSolicitudToDelete] = useState(null);
-
-  // Tipo de usuario (rol) que tengas almacenado localmente
-  const [userRole, setUserRole] = useState("");
-
   /**
-   * Función para obtener todas las solicitudes desde Firebase
+   * 1) Cargar todas las solicitudes desde Firebase (colección "solicitudes_enfermeria")
    */
   const fetchAllSolicitudes = async () => {
     setLoading(true);
     try {
-      // Si tienes que filtrar desde Firestore, aquí podrías armar un query. Por ejemplo:
-      // const q = query(collection(db, 'solicitudenfermeria'), where('estado', '==', 'pendiente'));
-      // Pero en este ejemplo traemos todo y luego filtramos en el cliente, tal como lo haces ahora:
-      const colRef = collection(db, 'solicitudenfermeria');
-
-      // Obtenemos los documentos
+      const colRef = collection(db, 'solicitudes_enfermeria'); 
       const snapshot = await getDocs(colRef);
 
       // Convertimos la data a un arreglo de objetos
       const data = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
-        ...docSnap.data()
+        ...docSnap.data(),
       }));
 
       setAllSolicitudes(data);
@@ -89,39 +65,32 @@ export default function ListarSolicitudes() {
   };
 
   /**
-   * Cargar data de Firebase y rol del usuario al montar
+   * 2) Montaje del componente: obtenemos las solicitudes
    */
   useEffect(() => {
     fetchAllSolicitudes();
-    AsyncStorage.getItem('userRole').then(role => {
-      if (role) setUserRole(role);
-    });
   }, []);
 
   /**
-   * Filtro y ordenamiento en el cliente
+   * 3) Filtrado y orden en el cliente
    */
   useEffect(() => {
     const filtradas = allSolicitudes.filter((solicitud) => {
       // Filtro por apellido
       if (
         apellidoPaciente &&
-        !solicitud.apellido_paciente?.toLowerCase().includes(apellidoPaciente.toLowerCase())
+        !solicitud.apellido_paciente
+          ?.toLowerCase()
+          .includes(apellidoPaciente.toLowerCase())
       ) {
         return false;
       }
       // Filtro por nombre
       if (
         nombrePaciente &&
-        !solicitud.nombre_paciente?.toLowerCase().includes(nombrePaciente.toLowerCase())
-      ) {
-        return false;
-      }
-      // Filtro por usuario
-      if (
-        usuarioFiltro &&
-        solicitud.usuario?.username &&
-        !solicitud.usuario.username.toLowerCase().includes(usuarioFiltro.toLowerCase())
+        !solicitud.nombre_paciente
+          ?.toLowerCase()
+          .includes(nombrePaciente.toLowerCase())
       ) {
         return false;
       }
@@ -148,18 +117,10 @@ export default function ListarSolicitudes() {
 
     setFilteredSolicitudes(filtradas);
     setCurrentPage(1);
-  }, [
-    allSolicitudes,
-    apellidoPaciente,
-    nombrePaciente,
-    usuarioFiltro,
-    fechaInicio,
-    fechaFin,
-    estadoFiltro
-  ]);
+  }, [allSolicitudes, apellidoPaciente, nombrePaciente, fechaInicio, fechaFin, estadoFiltro]);
 
   /**
-   * Paginación (actualizar la página actual)
+   * 4) Paginación: actualizamos la página
    */
   useEffect(() => {
     const startIndex = (currentPage - 1) * PAGE_SIZE;
@@ -168,58 +129,18 @@ export default function ListarSolicitudes() {
   }, [filteredSolicitudes, currentPage]);
 
   /**
-   * Limpiar filtros
+   * 5) Limpiar filtros
    */
   const clearFilters = () => {
     setApellidoPaciente("");
     setNombrePaciente("");
-    setUsuarioFiltro("");
     setFechaInicio("");
     setFechaFin("");
     setEstadoFiltro("");
   };
 
   /**
-   * Confirmar entrega (ejemplo de actualización en Firestore)
-   */
-  const confirmEntrega = async (id) => {
-    try {
-      // Ubicamos el documento que queremos actualizar:
-      const docRef = doc(db, 'solicitudenfermeria', id);
-      // Aquí asumimos que, al confirmar, cambiamos el campo "estado" a "entregado"
-      // o algo similar:
-      await updateDoc(docRef, {
-        estado: 'entregado',
-        // Otros campos que quieras actualizar
-      });
-      Alert.alert("Éxito", "Se ha confirmado la entrega correctamente.");
-      // Recargamos la lista
-      fetchAllSolicitudes();
-    } catch (error) {
-      console.error("Error confirmando entrega en Firebase:", error);
-      Alert.alert("Error", "Ocurrió un error al confirmar la entrega.");
-    }
-  };
-
-  /**
-   * Eliminar solicitud (DELETE en Firestore)
-   */
-  const deleteSolicitud = async () => {
-    if (!solicitudToDelete) return;
-    try {
-      const docRef = doc(db, 'solicitudenfermeria', solicitudToDelete.id);
-      await deleteDoc(docRef);
-      Alert.alert("Éxito", "Solicitud eliminada correctamente.");
-      setDeleteModalVisible(false);
-      fetchAllSolicitudes();
-    } catch (error) {
-      console.error("Error eliminando solicitud en Firebase:", error);
-      Alert.alert("Error", "Ocurrió un error al eliminar la solicitud.");
-    }
-  };
-
-  /**
-   * Renderizado de cada solicitud
+   * Renderizar cada tarjeta de solicitud
    */
   const renderSolicitud = ({ item }) => (
     <View
@@ -232,83 +153,64 @@ export default function ListarSolicitudes() {
         <Text style={styles.cardTitle}>
           {item.apellido_paciente} {item.nombre_paciente}
         </Text>
+        
         <Text style={styles.cardText}>
-          Sector: {item.sector ? item.sector.nombre : "N/A"}
+          Sector: {item.sector || "N/A"}
         </Text>
         <Text style={styles.cardText}>
-          Cama: {item.cama ? item.cama.numero : "N/A"}
+          Cama: {item.cama || "N/A"}
         </Text>
         <Text style={styles.cardText}>
-          Enfermero: {item.usuario ? item.usuario.username : "N/A"}
+          Enfermero: {item.usuario || "N/A"}
         </Text>
         <Text style={styles.cardText}>
           Estado: {item.estado}
         </Text>
+
         {item.numero_caja && (
           <Text style={styles.cardText}>
-            Caja Roja: {item.numero_caja.numero}
+            Caja Roja: {item.numero_caja}
           </Text>
         )}
+
         <Text style={styles.cardText}>
           Elementos: {item.detalles}
         </Text>
+
         <Text style={styles.cardText}>
           Sacó medicamento: {item.saco_medicamento_de_caja ? "Sí" : "No"}
         </Text>
+
         {item.saco_medicamento_de_caja && (
           <>
             <Text style={styles.cardText}>
-              Origen: {item.origen_medicamento}
+              Origen: {item.origen_medicamento ?? "No especificado"}
             </Text>
             <Text style={styles.cardText}>
-              Elemento/s: {item.saco || "No especificado"}
+              Elemento/s: {item.saco ?? "No especificado"}
             </Text>
           </>
         )}
+
         <Text style={styles.cardText}>
           Fecha: {new Date(item.fecha_creacion).toLocaleString()}
         </Text>
-      </View>
-
-      {/* Ejemplo de botones de acción (si aplica) */}
-      <View style={styles.cardFooter}>
-        {item.estado === 'pendiente' && (
-          <TouchableOpacity
-            style={styles.buttonConfirm}
-            onPress={() => confirmEntrega(item.id)}
-          >
-            <Text style={styles.buttonText}>Confirmar Entrega</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Si eres admin o rol con permiso para eliminar */}
-        {(userRole === 'admin' || userRole === 'sup-enfermero') && (
-          <TouchableOpacity
-            style={styles.buttonDelete}
-            onPress={() => {
-              setSolicitudToDelete(item);
-              setDeleteModalVisible(true);
-            }}
-          >
-            <Text style={styles.buttonText}>Eliminar</Text>
-          </TouchableOpacity>
-        )}
       </View>
     </View>
   );
 
   /**
-   * Paginación
+   * 6) Funciones de cambio de página
    */
   const goToNextPage = () => {
     if (currentPage * PAGE_SIZE < filteredSolicitudes.length) {
-      setCurrentPage((prev) => prev + 1);
+      setCurrentPage(prev => prev + 1);
     }
   };
 
   const goToPreviousPage = () => {
     if (currentPage > 1) {
-      setCurrentPage((prev) => prev - 1);
+      setCurrentPage(prev => prev - 1);
     }
   };
 
@@ -316,7 +218,7 @@ export default function ListarSolicitudes() {
     <View style={styles.mainContainer}>
       <Text style={styles.header}>Solicitudes de Enfermería</Text>
 
-      {/* Botones de navegación */}
+      {/* Botón para crear solicitud (opcional) */}
       <View style={styles.buttonGroup}>
         <TouchableOpacity
           style={styles.buttonPrimary}
@@ -340,26 +242,33 @@ export default function ListarSolicitudes() {
           value={nombrePaciente}
           onChangeText={setNombrePaciente}
         />
-        {(userRole === 'admin' || userRole === 'Farmacia' || userRole === 'sup-enfermero') && (
-          <TextInput
-            style={styles.filterInput}
-            placeholder="Enfermero"
-            value={usuarioFiltro}
-            onChangeText={setUsuarioFiltro}
-          />
-        )}
 
         <View style={styles.filterPickerContainer}>
           <Picker
             selectedValue={estadoFiltro}
             style={styles.filterPicker}
-            onValueChange={(itemValue) => setEstadoFiltro(itemValue)}
+            onValueChange={(value) => setEstadoFiltro(value)}
           >
             <Picker.Item label="Estado: Pendiente" value="pendiente" />
             <Picker.Item label="Estado: Entregado" value="entregado" />
             <Picker.Item label="Todos" value="" />
           </Picker>
         </View>
+
+        {/* Fechas: formateo YYYY-MM-DD */}
+        <TextInput
+          style={styles.filterInput}
+          placeholder="Fecha inicio (YYYY-MM-DD)"
+          value={fechaInicio}
+          onChangeText={setFechaInicio}
+        />
+        <TextInput
+          style={styles.filterInput}
+          placeholder="Fecha fin (YYYY-MM-DD)"
+          value={fechaFin}
+          onChangeText={setFechaFin}
+        />
+
         <View style={styles.filterButtonContainer}>
           <TouchableOpacity style={styles.filterButton} onPress={fetchAllSolicitudes}>
             <Text style={styles.filterButtonText}>Buscar</Text>
@@ -376,7 +285,7 @@ export default function ListarSolicitudes() {
       ) : (
         <FlatList
           data={paginatedSolicitudes}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item) => item.id}
           renderItem={renderSolicitud}
           contentContainerStyle={styles.listContainer}
         />
@@ -392,40 +301,11 @@ export default function ListarSolicitudes() {
           <Text style={styles.paginationButtonText}>Siguiente</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Modal de eliminación */}
-      <Modal
-        visible={deleteModalVisible}
-        transparent
-        animationType="fade"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.deleteModalContainer}>
-            <Text style={styles.modalTitle}>Confirmar eliminación</Text>
-            <Text style={styles.modalMessage}>
-              ¿Estás seguro de que deseas eliminar esta solicitud?
-            </Text>
-            <View style={styles.modalButtonContainer}>
-              <TouchableOpacity
-                style={styles.modalButton}
-                onPress={() => setDeleteModalVisible(false)}
-              >
-                <Text style={styles.modalButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonDelete]}
-                onPress={deleteSolicitud}
-              >
-                <Text style={styles.modalButtonText}>Eliminar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
 
+// Estilos
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
@@ -440,21 +320,14 @@ const styles = StyleSheet.create({
   },
   buttonGroup: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     marginBottom: 20,
   },
   buttonPrimary: {
     backgroundColor: '#007bff',
     padding: 10,
     borderRadius: 8,
-    margin: 5,
-  },
-  buttonSecondary: {
-    backgroundColor: '#6c757d',
-    padding: 10,
-    borderRadius: 8,
-    margin: 5,
+    marginHorizontal: 5,
   },
   buttonText: {
     color: '#fff',
@@ -505,11 +378,6 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     borderWidth: 1,
     borderColor: '#ddd',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
   },
   cardPendiente: {
     borderColor: '#ffc107',
@@ -529,29 +397,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 3,
   },
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    flexWrap: 'wrap',
-  },
-  buttonConfirm: {
-    backgroundColor: '#28a745',
-    padding: 8,
-    borderRadius: 8,
-    margin: 5,
-  },
-  buttonEdit: {
-    backgroundColor: '#ffc107',
-    padding: 8,
-    borderRadius: 8,
-    margin: 5,
-  },
-  buttonDelete: {
-    backgroundColor: '#dc3545',
-    padding: 8,
-    borderRadius: 8,
-    margin: 5,
-  },
   paginationContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -568,50 +413,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   paginationText: {
-    fontSize: 16,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-  },
-  deleteModalContainer: {
-    width: '90%',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 20,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 15,
-  },
-  modalMessage: {
-    fontSize: 16,
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  modalButtonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  modalButton: {
-    backgroundColor: '#007bff',
-    padding: 10,
-    borderRadius: 8,
-    flex: 1,
-    marginHorizontal: 5,
-  },
-  modalButtonDelete: {
-    backgroundColor: '#dc3545',
-  },
-  modalButtonText: {
-    color: '#fff',
-    textAlign: 'center',
     fontSize: 16,
   },
 });

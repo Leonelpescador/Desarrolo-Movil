@@ -1,3 +1,4 @@
+// src/screens/RegisterScreen.js
 import React, { useState } from 'react';
 import {
   View,
@@ -12,38 +13,42 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../src/firebase';
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth } from '../src/firebase'; // Asegúrate de que este archivo exporte { auth }
 
 const { width, height } = Dimensions.get('window');
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const navigation = useNavigation();
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Error", "Debes ingresar correo y contraseña.");
+  const handleRegister = async () => {
+    if (!email || !username || !password || !confirmPassword) {
+      Alert.alert('Error', 'Todos los campos son obligatorios.');
       return;
     }
-
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Las contraseñas no coinciden.');
+      return;
+    }
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      Alert.alert("Éxito", "Inicio de sesión correcto.");
+      // Crear el usuario en Firebase
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Actualizar el displayName para mostrar el username
+      await updateProfile(userCredential.user, { displayName: username });
+      Alert.alert('Éxito', 'Usuario registrado correctamente.');
       navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
     } catch (error) {
-      Alert.alert("Error", error.message);
+      console.error('Error en registro:', error);
+      Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const openWebView = (url) => {
-    navigation.navigate('WebView', { url });
   };
 
   return (
@@ -53,58 +58,54 @@ export default function LoginScreen() {
       resizeMode="cover"
     >
       <View style={styles.container}>
-        <View style={styles.loginContainer}>
+        <View style={styles.formContainer}>
           <Image
             source={require('../assets/cenesa_logo.jpg')}
             style={styles.logo}
           />
-          <Text style={styles.title}>Iniciar Sesión</Text>
-
+          <Text style={styles.title}>Registrar Usuario</Text>
           <TextInput
             style={styles.input}
             placeholder="Correo electrónico"
             placeholderTextColor="#aaa"
             value={email}
             onChangeText={setEmail}
-            autoCapitalize="none"
             keyboardType="email-address"
+            autoCapitalize="none"
           />
-
-          <View style={styles.passwordContainer}>
-            <TextInput
-              style={styles.passwordInput}
-              placeholder="Contraseña"
-              placeholderTextColor="#aaa"
-              secureTextEntry={!showPassword}
-              value={password}
-              onChangeText={setPassword}
-            />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Text style={styles.showPasswordText}>
-                {showPassword ? 'Ocultar' : 'Mostrar'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity style={styles.button} onPress={handleLogin}>
+          <TextInput
+            style={styles.input}
+            placeholder="Nombre de usuario"
+            placeholderTextColor="#aaa"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Contraseña"
+            placeholderTextColor="#aaa"
+            secureTextEntry={true}
+            value={password}
+            onChangeText={setPassword}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Confirmar contraseña"
+            placeholderTextColor="#aaa"
+            secureTextEntry={true}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+          />
+          <TouchableOpacity style={styles.button} onPress={handleRegister}>
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Iniciar Sesión</Text>
+              <Text style={styles.buttonText}>Registrar</Text>
             )}
           </TouchableOpacity>
-
-          <View style={styles.linkContainer}>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.linkText}>Regístrate aquí</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-              <Text style={styles.linkText}>¿Olvidaste tu contraseña?</Text>
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity onPress={() => openWebView('https://www.instagram.com/leonelpescador/')}>
-            <Text style={styles.developerText}>Desarrollado por Pescador Leonel</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.linkText}>¿Ya tienes una cuenta? Inicia sesión</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  loginContainer: {
+  formContainer: {
     width: '100%',
     backgroundColor: 'rgba(255,255,255,0.9)',
     padding: 40,
@@ -161,26 +162,6 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     color: '#333',
   },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    marginBottom: 20,
-  },
-  passwordInput: {
-    flex: 1,
-    padding: 12,
-    fontSize: 16,
-    color: '#333',
-  },
-  showPasswordText: {
-    padding: 10,
-    color: '#007bff',
-  },
   button: {
     backgroundColor: '#4A90E2',
     paddingVertical: 12,
@@ -194,21 +175,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  linkContainer: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
   linkText: {
     color: '#007bff',
     fontSize: 16,
-    marginVertical: 5,
-    textDecorationLine: 'underline',
-  },
-  developerText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 20,
+    marginTop: 10,
     textDecorationLine: 'underline',
   },
 });

@@ -1,11 +1,9 @@
-// navigation/Navigation.js
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchWithAuth } from '../src/api';
-
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../src/firebase'; // Asegúrate de que esta ruta es correcta y exporta { auth }
 
 // Importa tus pantallas
 import Login from '../screens/Login';
@@ -16,7 +14,9 @@ import EliminarSolicitud from '../screens/enfermeria/EliminarSolicitud';
 import ListarSolicitudes from '../screens/enfermeria/ListarSolicitudes';
 import Logout from '../screens/Logout';
 import WebViewScreen from '../screens/WebViewScreen';
-import Manual from '../screens/Manual/Manual';   
+import Manual from '../screens/Manual/Manual';
+import RegisterScreen from '../screens/RegisterScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 
 const Stack = createStackNavigator();
 
@@ -24,38 +24,14 @@ export default function Navigation() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Usamos onAuthStateChanged de Firebase para detectar si hay un usuario logueado
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const token = await AsyncStorage.getItem("token");
-  
-        if (!token) {
-          setIsAuthenticated(false);
-          setIsLoading(false);
-          return;
-        }
-  
-        // 🔹 Verificamos si el token sigue siendo válido haciendo una petición a un endpoint protegido
-        const response = await fetchWithAuth("/manual/");
-  
-        if (response.error === "invalid_token") {
-          setIsAuthenticated(false);
-          setIsLoading(false);
-          return;
-        }
-  
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error("Error al verificar autenticación:", error);
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-  
-    checkAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
-  
 
   if (isLoading) {
     return (
@@ -68,7 +44,6 @@ export default function Navigation() {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName={isAuthenticated ? "Home" : "Login"}>
-        {/* Todas las rutas se definen siempre */}
         <Stack.Screen 
           name="Login" 
           component={Login} 
@@ -99,13 +74,21 @@ export default function Navigation() {
           component={ListarSolicitudes} 
           options={{ title: "Solicitudes de Enfermería" }}
         />
-
         <Stack.Screen 
           name="Manual" 
           component={Manual} 
           options={{ title: "Manual" }}
         />
-
+        <Stack.Screen 
+          name="Register" 
+          component={RegisterScreen} 
+          options={{ title: "Registrar Usuario" }}
+        />
+        <Stack.Screen 
+          name="ForgotPassword" 
+          component={ForgotPasswordScreen} 
+          options={{ title: "Recuperar Contraseña" }}
+        />
         <Stack.Screen 
           name="Logout" 
           component={Logout} 
@@ -116,8 +99,6 @@ export default function Navigation() {
           component={WebViewScreen} 
           options={{ title: "Sitio Web" }}
         />
-
-
       </Stack.Navigator>
     </NavigationContainer>
   );

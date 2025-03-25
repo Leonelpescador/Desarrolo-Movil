@@ -78,15 +78,12 @@ export default function Home() {
           <Image source={require('../assets/defaultprofile.png')} style={styles.profileImage} />
         )}
         <Text style={styles.profileText}>
-          Hola {perfil?.nombre} {perfil?.apellido}.
+          Hola {perfil?.nombre} {perfil?.apellido}
         </Text>
       </View>
 
       <View style={styles.systemHeader}>
-        <Text style={styles.systemTitle}>Sistema de Enfermería</Text>
-        <Text style={styles.systemSubtitle}>
-          Gestione las solicitudes y el seguimiento de pacientes.
-        </Text>
+        
       </View>
 
       <Text style={styles.sectionTitle}>Últimas Novedades</Text>

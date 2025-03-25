@@ -40,15 +40,15 @@ export default function NuevoUsuario() {
       'Seleccione con quién desea comunicarse:',
       [
         {
-          text: '📞 Nicolás Gianzanti - Gerente',
+          text: '📞 Nicolás G.- Gerente',
           onPress: () => openWhatsApp('5493874875036')
         },
         {
-          text: '📞 Esteban - Informática',
+          text: '📞 Esteban C.- Informática',
           onPress: () => openWhatsApp('5493874139627')
         },
         {
-          text: '📞 Leonel - Informática',
+          text: '📞 Leonel P.- Informática',
           onPress: () => openWhatsApp('5493875795436')
         },
         { text: 'Cancelar', style: 'cancel' }

@@ -11,28 +11,22 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import { useNavigation } from '@react-navigation/native';
-
-// Si usas Firebase Auth:
 import { signOut } from 'firebase/auth';
-import { auth } from '../src/firebase'; // Ajusta la ruta donde inicializas Firebase y exportas 'auth'
+import { auth } from '../src/firebase';
+
+// Importar hook de perfil
+import { useCompleteUserData } from '../src/hooks/useCompleteUserData';
 
 export default function Base({ children }) {
   const navigation = useNavigation();
+  const { perfil } = useCompleteUserData();
 
-  // Estado para mostrar/ocultar el modal de confirmación de logout
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
-
-  // Estado para mostrar/ocultar el menú desplegable de "Manual"
   const [manualModalVisible, setManualModalVisible] = useState(false);
+  const [solicitudModalVisible, setSolicitudModalVisible] = useState(false);
 
-  // LOGOUT
-  const handlePressLogout = () => {
-    setLogoutModalVisible(true);
-  };
-
-  const handleCancelLogout = () => {
-    setLogoutModalVisible(false);
-  };
+  const handlePressLogout = () => setLogoutModalVisible(true);
+  const handleCancelLogout = () => setLogoutModalVisible(false);
 
   const handleConfirmLogout = useCallback(async () => {
     try {
@@ -42,111 +36,68 @@ export default function Base({ children }) {
         routes: [{ name: 'Logout' }],
       });
     } catch (error) {
-      console.error('Error al cerrar sesión en Firebase:', error);
+      console.error('Error al cerrar sesión:', error);
     } finally {
       setLogoutModalVisible(false);
     }
   }, [navigation]);
 
-  // MENÚ INFERIOR
   const navigateTo = useCallback((screen) => {
     navigation.navigate(screen);
   }, [navigation]);
 
-  // Abre/cierra el modal con el submenú de Manual
-  const handleOpenManualMenu = () => {
-    setManualModalVisible(true);
-  };
-  const handleCloseManualMenu = () => {
-    setManualModalVisible(false);
-  };
-
-  // Ejemplos de acciones dentro del submenú de Manual
-  const handleVerManual = () => {
-    setManualModalVisible(false);
-    navigation.navigate('Manual');
-  };
-  const handleOtraOpcion = () => {
-    setManualModalVisible(false);
-    console.log("Ejecutar otra opción de menú...");
-  };
+  const tipoPermitido = ['admin', 'Farmacia', 'enfermero', 'sup-enfermero'];
 
   return (
     <View style={styles.container}>
       {Platform.OS === 'android' && <StatusBar backgroundColor="#37474F" />}
-      
+
       <View style={styles.header}>
         <Image
           source={require('../assets/logos-de-cenesa_sombra.png')}
           style={styles.logo}
           resizeMode="contain"
         />
-        
-        {/* Botón de Logout (abre modal de confirmación) */}
         <TouchableOpacity onPress={handlePressLogout} style={styles.logout}>
           <Icon name="sign-out-alt" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.content}>
-        {children}
-      </View>
+      <View style={styles.content}>{children}</View>
 
-      {/* Menú inferior */}
       <View style={styles.bottomMenu}>
+        {tipoPermitido.includes(perfil?.tipo_usuario) && (
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => setSolicitudModalVisible(true)}
+          >
+            <Icon name="user-nurse" size={24} color="#fff" />
+            <Text style={styles.menuItemText}>Solicitudes</Text>
+          </TouchableOpacity>
+        )}
 
-        {/* Ícono de enfermero/médico para ir a Solicitudes */}
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => navigateTo('ListarSolicitudesEnfermeria')}
-        >
-          <Icon name="user-nurse" size={24} color="#fff" />
-          <Text style={styles.menuItemText}>Solicitudes</Text>
-        </TouchableOpacity>
-
-        {/* Ícono de casa para ir al Home */}
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => navigateTo('Home')}
-        >
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigateTo('Home')}>
           <Icon name="home" size={24} color="#fff" />
           <Text style={styles.menuItemText}>Home</Text>
         </TouchableOpacity>
 
-        {/* Menú "Manual" con subopciones: ícono 'bars' en lugar de 'menu' */}
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={handleOpenManualMenu}
-        >
+        <TouchableOpacity style={styles.menuItem} onPress={() => setManualModalVisible(true)}>
           <Icon name="bars" size={24} color="#fff" />
           <Text style={styles.menuItemText}>Menú</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Modal de confirmación de logout */}
-      <Modal
-        visible={logoutModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={handleCancelLogout}
-      >
+      {/* Modal Logout */}
+      <Modal visible={logoutModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Confirmar cierre de sesión</Text>
             <Text style={styles.modalMessage}>¿Estás seguro de que deseas salir?</Text>
-
             <View style={styles.modalButtonContainer}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.buttonCancel]}
-                onPress={handleCancelLogout}
-              >
+              <TouchableOpacity style={[styles.modalButton, styles.buttonCancel]} onPress={handleCancelLogout}>
                 <Text style={styles.modalButtonText}>Cancelar</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalButton, styles.buttonConfirm]}
-                onPress={handleConfirmLogout}
-              >
+              <TouchableOpacity style={[styles.modalButton, styles.buttonConfirm]} onPress={handleConfirmLogout}>
                 <Text style={styles.modalButtonText}>Salir</Text>
               </TouchableOpacity>
             </View>
@@ -154,48 +105,73 @@ export default function Base({ children }) {
         </View>
       </Modal>
 
-      {/* Modal desplegable para Manual */}
-      <Modal
-        visible={manualModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={handleCloseManualMenu}
-      >
+      {/* Modal de Solicitudes */}
+      <Modal visible={solicitudModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalMenuContainer}>
-            <Text style={styles.modalMenuTitle}>Opciones de Manual</Text>
+            <Text style={styles.modalMenuTitle}>Gestión de Solicitudes</Text>
 
-            {/* Botón para ver Manual */}
-            <TouchableOpacity style={styles.menuOption} onPress={handleVerManual}>
-              <Icon name="book-open" size={20} color="#333" />
-              <Text style={styles.menuOptionText}>Ver Manual</Text>
-            </TouchableOpacity>
-            
-             {/* Botón para ver Usuarios */}
-            <TouchableOpacity style={styles.menuOption} onPress={() => navigateTo('ListarUsuarios')}>
-              <Icon name="users" size={20} color="#333" />
-              <Text style={styles.menuOptionText}>Ver Usuarios</Text>
-            </TouchableOpacity>
-
-
-
-            {/* Botón para otra posible acción */}
-            <TouchableOpacity style={styles.menuOption} onPress={handleOtraOpcion}>
-              <Icon name="plus" size={20} color="#333" />
-              <Text style={styles.menuOptionText}>Otra Opción</Text>
+            <TouchableOpacity
+              style={styles.menuOption}
+              onPress={() => {
+                setSolicitudModalVisible(false);
+                navigateTo('CrearSolicitudEnfermeria');
+              }}
+            >
+              <Icon name="plus-circle" size={20} color="#333" />
+              <Text style={styles.menuOptionText}>Crear Solicitud</Text>
             </TouchableOpacity>
 
-            {/* Botón para cerrar el menú */}
-            <TouchableOpacity style={styles.closeMenuButton} onPress={handleCloseManualMenu}>
-              <Text style={styles.closeMenuButtonText}>Cerrar Menú</Text>
+            <TouchableOpacity
+              style={styles.menuOption}
+              onPress={() => {
+                setSolicitudModalVisible(false);
+                navigateTo('ListarSolicitudesEnfermeria');
+              }}
+            >
+              <Icon name="clipboard-list" size={20} color="#333" />
+              <Text style={styles.menuOptionText}>Ver Solicitudes</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.closeMenuButton} onPress={() => setSolicitudModalVisible(false)}>
+              <Text style={styles.closeMenuButtonText}>Cerrar</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
+      {/* Modal Manual */}
+      <Modal visible={manualModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalMenuContainer}>
+            <Text style={styles.modalMenuTitle}>Opciones de Manual</Text>
+
+            <TouchableOpacity style={styles.menuOption} onPress={() => {
+              setManualModalVisible(false);
+              navigateTo('Manual');
+            }}>
+              <Icon name="book-open" size={20} color="#333" />
+              <Text style={styles.menuOptionText}>Ver Manual</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuOption} onPress={() => {
+              setManualModalVisible(false);
+              navigateTo('ListarUsuarios');
+            }}>
+              <Icon name="users" size={20} color="#333" />
+              <Text style={styles.menuOptionText}>perfil</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.closeMenuButton} onPress={() => setManualModalVisible(false)}>
+              <Text style={styles.closeMenuButtonText}>Cerrar Menú</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
+
 
 /** Estilos */
 const styles = StyleSheet.create({

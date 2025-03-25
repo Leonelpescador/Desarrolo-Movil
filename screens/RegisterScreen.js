@@ -69,7 +69,7 @@ export default function RegisterScreen() {
       });
 
       Alert.alert('Éxito', 'Usuario registrado correctamente.');
-      navigation.reset({ index: 0, routes: [{ name: 'Nuevo' }] });
+      navigation.reset({ index: 0, routes: [{ name: 'Restriccion' }] });
     } catch (error) {
       console.error('Error en el registro:', error);
       Alert.alert('Error', error.message);

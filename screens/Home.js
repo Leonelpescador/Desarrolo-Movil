@@ -75,7 +75,7 @@ export default function Home() {
         {perfil?.foto_perfil ? (
           <Image source={{ uri: perfil.foto_perfil }} style={styles.profileImage} />
         ) : (
-          <Image source={require('../assets/fotodeperfil.png')} style={styles.profileImage} />
+          <Image source={require('../assets/fotodeperfil_fixed.png')} style={styles.profileImage} />
         )}
         <Text style={styles.profileText}>
           Hola {perfil?.nombre} {perfil?.apellido}

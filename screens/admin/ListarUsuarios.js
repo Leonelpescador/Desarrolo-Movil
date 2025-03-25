@@ -54,7 +54,7 @@ export default function ListarUsuarios() {
     <View style={styles.card}>
       <View style={styles.row}>
         <Image
-          source={item.foto_perfil ? { uri: item.foto_perfil } : require('../../assets/fotodeperfil.png')}
+          source={item.foto_perfil ? { uri: item.foto_perfil } : require('../../assets/fotodeperfil_fixed.png')}
           style={styles.avatar}
         />
         <View style={{ marginLeft: 12, flex: 1 }}>

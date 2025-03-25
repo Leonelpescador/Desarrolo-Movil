@@ -170,6 +170,14 @@ export default function Base({ children }) {
               <Icon name="book-open" size={20} color="#333" />
               <Text style={styles.menuOptionText}>Ver Manual</Text>
             </TouchableOpacity>
+            
+             {/* Botón para ver Usuarios */}
+            <TouchableOpacity style={styles.menuOption} onPress={() => navigateTo('ListarUsuarios')}>
+              <Icon name="users" size={20} color="#333" />
+              <Text style={styles.menuOptionText}>Ver Usuarios</Text>
+            </TouchableOpacity>
+
+
 
             {/* Botón para otra posible acción */}
             <TouchableOpacity style={styles.menuOption} onPress={handleOtraOpcion}>

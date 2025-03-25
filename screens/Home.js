@@ -20,10 +20,18 @@ export default function Home() {
   const [novedades, setNovedades] = useState([]);
   const [loadingNovedades, setLoadingNovedades] = useState(true);
 
-  // Obtenemos el usuario y perfil completo desde Firebase usando nuestro hook
   const { user, perfil, loading: loadingUser } = useCompleteUserData();
 
-  // Función para cargar las novedades desde Firestore
+  // 🔒 Redirigir a usuarios con tipo 'invitado'
+  useEffect(() => {
+    if (!loadingUser && perfil?.tipo_usuario === 'invitado') {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Restriccion' }],
+      });
+    }
+  }, [loadingUser, perfil]);
+
   const fetchNovedades = async () => {
     setLoadingNovedades(true);
     try {
@@ -46,7 +54,6 @@ export default function Home() {
     fetchNovedades();
   }, []);
 
-  // Función que renderiza cada novedad en forma de tarjeta
   const renderNovedad = ({ item }) => (
     <View style={styles.novedadCard}>
       <Text style={styles.novedadTitle}>{item.titulo}</Text>
@@ -62,7 +69,6 @@ export default function Home() {
     </View>
   );
 
-  // Cabecera que muestra la foto de perfil y la bienvenida
   const ListHeader = () => (
     <View style={styles.content}>
       <View style={styles.profileContainer}>
@@ -72,7 +78,7 @@ export default function Home() {
           <Image source={require('../assets/defaultprofile.png')} style={styles.profileImage} />
         )}
         <Text style={styles.profileText}>
-          Hola {perfil?.username || user?.displayName || ""}
+          Hola {perfil?.nombre} {perfil?.apellido}.
         </Text>
       </View>
 
@@ -81,20 +87,6 @@ export default function Home() {
         <Text style={styles.systemSubtitle}>
           Gestione las solicitudes y el seguimiento de pacientes.
         </Text>
-        <View style={styles.systemButtons}>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => navigation.navigate('CrearSolicitudEnfermeria')}
-          >
-            <Text style={styles.primaryButtonText}>➕ Crear Solicitud</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => navigation.navigate('ListarSolicitudesEnfermeria')}
-          >
-            <Text style={styles.primaryButtonText}>Ver Solicitudes</Text>
-          </TouchableOpacity>
-        </View>
       </View>
 
       <Text style={styles.sectionTitle}>Últimas Novedades</Text>

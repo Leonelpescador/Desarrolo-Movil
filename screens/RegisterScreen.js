@@ -1,4 +1,3 @@
-// src/screens/RegisterScreen.js
 import React, { useState } from 'react';
 import {
   View,
@@ -13,13 +12,19 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { auth } from '../src/firebase'; // Asegúrate de que este archivo exporte { auth }
+import {
+  createUserWithEmailAndPassword,
+  updateProfile,
+} from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '../src/firebase'; // Asegurate que exportás bien auth y db
 
 const { width, height } = Dimensions.get('window');
 
 export default function RegisterScreen() {
   const navigation = useNavigation();
+  const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -27,7 +32,7 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!email || !username || !password || !confirmPassword) {
+    if (!nombre || !apellido || !email || !username || !password || !confirmPassword) {
       Alert.alert('Error', 'Todos los campos son obligatorios.');
       return;
     }
@@ -35,16 +40,38 @@ export default function RegisterScreen() {
       Alert.alert('Error', 'Las contraseñas no coinciden.');
       return;
     }
+
     setLoading(true);
     try {
-      // Crear el usuario en Firebase
+      // 1. Crear usuario en Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Actualizar el displayName para mostrar el username
-      await updateProfile(userCredential.user, { displayName: username });
+      const firebaseUser = userCredential.user;
+
+      // 2. Actualizar nombre visible en Firebase Auth
+      await updateProfile(firebaseUser, {
+        displayName: username,
+      });
+
+      // 3. Crear perfil en Firestore
+      await setDoc(doc(db, 'perfiles_usuarios', firebaseUser.uid), {
+        firebase_uid: firebaseUser.uid,
+        email: email,
+        username: username,
+        nombre: nombre,
+        apellido: apellido,
+        usuario_id: null, // lo podés completar desde Django si querés
+        tipo_usuario: 'invitado',//esto evita que el usuario pueda acceder a la app sin autorizacion.
+        foto_perfil: null,
+        acepto_terminos: false,
+        fecha_aceptacion: null,
+        preguntas_configuradas: false,
+        created_at: serverTimestamp()
+      });
+
       Alert.alert('Éxito', 'Usuario registrado correctamente.');
-      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+      navigation.reset({ index: 0, routes: [{ name: 'Nuevo' }] });
     } catch (error) {
-      console.error('Error en registro:', error);
+      console.error('Error en el registro:', error);
       Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
@@ -64,6 +91,21 @@ export default function RegisterScreen() {
             style={styles.logo}
           />
           <Text style={styles.title}>Registrar Usuario</Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Nombre"
+            placeholderTextColor="#aaa"
+            value={nombre}
+            onChangeText={setNombre}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Apellido"
+            placeholderTextColor="#aaa"
+            value={apellido}
+            onChangeText={setApellido}
+          />
           <TextInput
             style={styles.input}
             placeholder="Correo electrónico"
@@ -85,7 +127,7 @@ export default function RegisterScreen() {
             style={styles.input}
             placeholder="Contraseña"
             placeholderTextColor="#aaa"
-            secureTextEntry={true}
+            secureTextEntry
             value={password}
             onChangeText={setPassword}
           />
@@ -93,10 +135,11 @@ export default function RegisterScreen() {
             style={styles.input}
             placeholder="Confirmar contraseña"
             placeholderTextColor="#aaa"
-            secureTextEntry={true}
+            secureTextEntry
             value={confirmPassword}
             onChangeText={setConfirmPassword}
           />
+
           <TouchableOpacity style={styles.button} onPress={handleRegister}>
             {loading ? (
               <ActivityIndicator color="#fff" />
@@ -104,6 +147,7 @@ export default function RegisterScreen() {
               <Text style={styles.buttonText}>Registrar</Text>
             )}
           </TouchableOpacity>
+
           <TouchableOpacity onPress={() => navigation.navigate('Login')}>
             <Text style={styles.linkText}>¿Ya tienes una cuenta? Inicia sesión</Text>
           </TouchableOpacity>
@@ -114,27 +158,14 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    width: width,
-    height: height,
-  },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
+  background: { flex: 1, width, height },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   formContainer: {
     width: '100%',
     backgroundColor: 'rgba(255,255,255,0.9)',
     padding: 40,
     borderRadius: 20,
     alignItems: 'center',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 15,
     elevation: 5,
   },
   logo: {
@@ -157,9 +188,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     fontSize: 16,
-    marginBottom: 20,
+    marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#ccc',
     color: '#333',
   },
   button: {
@@ -170,11 +201,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   linkText: {
     color: '#007bff',
     fontSize: 16,
